@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package mine;
+
+service MineService {
+  rpc StartMining (StartMiningRequest) returns (stream StartMiningResponse);
+}
+
+message StartMiningRequest {}
+
+message StartMiningResponse {}
