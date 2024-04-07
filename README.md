@@ -6,7 +6,7 @@ WIP browser-based idle game
 
 Generate default config with `RUSTFLAGS="--cfg tokio_unstable --cfg foundations_unstable" RUST_LOG=debug cargo run -- -g ./default-config.yml`
 
-You'll need a Postgres server.  Put config in `config.yml.
+You'll need a Postgres server.  Put config in `config.yml`.
 
 Run with `just run`.
 

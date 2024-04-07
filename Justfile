@@ -10,4 +10,4 @@ gen-protos:
   buf generate
 
 docker-build:
-  docker build -t ameo/mine-idler .
+  docker build --network host -t ameo/mine-idler .
