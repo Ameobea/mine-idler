@@ -1,0 +1,115 @@
+- id: 0
+  rarity_tier: 2
+  name: battery_canister
+  display_name: Battery Canister
+  description: A heavily corroded metal container holding the remnants of a lead acid battery
+- id: 1
+  rarity_tier: 3
+  name: neodymium_magnet
+  display_name: Neodymium Magnet
+  description: A strong permanent magnet made out of a metal alloy containing neodymium
+- id: 2
+  rarity_tier: 1
+  name: copper_wire
+  display_name: Copper Wiring
+  description: A span of plastic-coated copper wires
+- id: 3
+  rarity_tier: 0
+  name: pet_plastic_fragments
+  display_name: PET Plastic Fragments
+  description: An assortment of small pieces of plastic composed of Polyethylene Terephthalate
+- id: 4
+  rarity_tier: 1
+  name: aluminum_sheet
+  display_name: Aluminum Sheeting
+  description: A thin, dented sheet of solid aluminum
+- id: 5
+  rarity_tier: 3
+  name: smoke_detector
+  display_name: Smoke Detector
+  description: A smoke detector, containing tiny amounts of radioactive material for detecting smoke particles
+- id: 6
+  rarity_tier: 0
+  name: concrete_rubble
+  display_name: Concrete Rubble
+  description: Chunks of broken up concrete
+- id: 7
+  rarity_tier: 3
+  name: small_dc_motor
+  display_name: Small Electric Motor
+  description: A small DC-powered motor
+- id: 8
+  rarity_tier: 1
+  name: steel_rebar
+  display_name: Steel Rebar
+  description: A bunch of tangled steel bars such as those used to reinforce concrete
+- id: 9
+  rarity_tier: 0
+  name: ldpe_plastic
+  display_name: LDPE Plastic Film
+  description: A bunch of dirty, flimsy, torn plastic film made of low-density polyethylene
+- id: 10
+  rarity_tier: 0
+  name: polyiso_insulation
+  display_name: Polyiso Insulation
+  description: Chunks of rigid boards made of Polyisocyanurate, likely used for insulating walls of buildings
+- id: 11
+  rarity_tier: 3
+  name: catalytic_converter
+  display_name: Catalytic Converter
+  description: Used to process the emissions of combustion engines.  Contains rare earth metals like platinum.
+- id: 12
+  rarity_tier: 0
+  name: wooden_palette
+  display_name: Wooden Palette
+  description: A wooden palette used for shipping and storage
+- id: 13
+  rarity_tier: 0
+  name: rusty_iron_chunk
+  display_name: Rusted Iron Chunk
+  description: A chunk of extremely rusted iron
+- id: 14
+  rarity_tier: 0
+  name: rubber_tire
+  display_name: Rubber Tire
+  description: A black rubber tire
+- id: 15
+  rarity_tier: 2
+  name: circuit_board
+  display_name: Circuit Board
+  description: A printed circuit board or PCB, used inside a huge variety of electronic devices
+- id: 16
+  rarity_tier: 5
+  name: plutonium_pacemaker_battery
+  display_name: Plutonium Pacemaker Battery
+  description: A pacemaker battery containing a plutonium fuel cell
+- id: 17
+  rarity_tier: 0
+  name: corrugated_cardboard
+  display_name: Corrugated Cardboard
+  description: Large strips of corrugated cardboard from boxes
+- id: 18
+  rarity_tier: 0
+  name: roof_shingles
+  display_name: Roof Shingles
+  description: Some asphalt-based shingles that used to be attached to the roof of a building
+- id: 19
+  rarity_tier: 4
+  name: paint_can
+  display_name: Paint Can
+  description: A can of acrylic paint, its lid still sealed
+- id: 20
+  rarity_tier: 1
+  name: pvc_pipe
+  display_name: PVC Pipe
+  description: A section of white PVC pipe
+- id: 21
+  rarity_tier: 1
+  name: rubber_hose
+  display_name: Rubber Hose
+  description: A span of rubber tubing for carrying liquid
+- id: 22
+  rarity_tier: 0
+  name: wooden_beam
+  display_name: Wooden Beam
+  description: a 2 inch by 4 inch beam made from hardwood

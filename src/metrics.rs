@@ -1,0 +1,2 @@
+#[metrics]
+pub mod miner {}

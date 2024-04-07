@@ -1,0 +1,26 @@
+---
+# Telemetry settings.
+telemetry:
+  # Metrics settings.
+  metrics:
+    # How the metrics service identifier defined in `ServiceInfo` is used
+    # for this service.
+    service_name_format: metric_prefix
+    # Whether to report optional metrics in the telemetry server.
+    report_optional: false
+  # Server settings.
+  server:
+    # Enables telemetry server
+    enabled: true
+    # Telemetry server address.
+    addr: "127.0.0.1:0"
+server:
+  port: 5900
+database:
+  host: localhost
+  port: 5432
+  username: mine_idler
+  password: ""
+  database: mine_idler
+auth:
+  session_token_lifetime_seconds: 15552000

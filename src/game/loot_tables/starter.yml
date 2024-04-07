@@ -1,0 +1,68 @@
+# grays
+- weight: 88.0
+  table:
+  - name: concrete_rubble
+    weight: 1.5
+  - name: ldpe_plastic
+    weight: 1.5
+  - name: polyiso_insulation
+    weight: 0.5
+  - name: wooden_palette
+    weight: 0.5
+  - name: rusty_iron_chunk
+    weight: 0.5
+  - name: pet_plastic_fragments
+    weight: 1.5
+  - name: rubber_tire
+    weight: 1.0
+  - name: corrugated_cardboard
+    weight: 1.5
+  - name: roof_shingles
+    weight: 0.5
+  - name: wooden_beam
+    weight: 0.5
+# blues
+- weight: 10.0
+  table:
+  - name: copper_wire
+    weight: 1.0
+  - name: aluminum_sheet
+    weight: 1.2
+  - name: steel_rebar
+    weight: 1.2
+  - name: pvc_pipe
+    weight: 1.0
+  - name: rubber_hose
+    weight: 1.2
+    quality_distribution:
+      type: normal
+      mean: 0.12
+      std_dev: 0.24
+# purples
+- weight: 2.3
+  table:
+  - name: battery_canister
+    weight: 2.0
+  - name: circuit_board
+    weight: 1.0
+# pinks
+- weight: 0.5
+  table:
+  - name: neodymium_magnet
+    weight: 1.0
+  - name: smoke_detector
+    weight: 0.5
+  - name: catalytic_converter
+    weight: 1.0
+  - name: small_dc_motor
+    weight: 1.0
+# reds
+- weight: 0.08
+  table:
+  - name: paint_can
+    weight: 1.0
+# golds
+- weight: 0.012
+  table:
+  - name: plutonium_pacemaker_battery
+    weight: 1.0
