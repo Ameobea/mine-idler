@@ -4,8 +4,12 @@ package mine;
 
 // Unauthenticated service
 service MinePublicService {
+  // Auth
   rpc Login (LoginRequest) returns (LoginResponse);
   rpc Register (RegisterRequest) returns (RegisterResponse);
+
+  // Community
+  rpc GetHiscores (GetHiscoresRequest) returns (GetHiscoresResponse);
 }
 
 message LoginRequest {
@@ -26,6 +30,17 @@ message RegisterResponse {
   string session_token = 1;
 }
 
+message HiscoreEntry {
+  string username = 1;
+  float total_value = 2;
+}
+
+message GetHiscoresRequest {}
+
+message GetHiscoresResponse {
+  repeated HiscoreEntry hiscores = 1;
+}
+
 // Authenticated service
 service MinePrivateService {
   // General
@@ -35,10 +50,12 @@ service MinePrivateService {
   // Account
   rpc GetAccount (GetAccountRequest) returns (GetAccountResponse);
   rpc GetInventory (GetInventoryRequest) returns (GetInventoryResponse);
+  rpc GetBase (GetBaseRequest) returns (GetBaseResponse);
 
   // Gameplay
   rpc StartMining (StartMiningRequest) returns (stream StartMiningResponse);
   rpc StopMining (StopMiningRequest) returns (StopMiningResponse);
+  rpc UpgradeBase (UpgradeBaseRequest) returns (UpgradeBaseResponse);
 }
 
 message ItemDescriptor {
@@ -122,8 +139,37 @@ message GetInventoryRequest {
 
 message GetInventoryResponse {
   repeated Item items = 1;
+  // total items in the full inventory, before any filtering or pagination
+  uint32 total_items = 2;
 }
 
 message StopMiningRequest {}
 
 message StopMiningResponse {}
+
+message GetBaseRequest {}
+
+message StorageUpgrades {
+  uint32 storage_level = 1;
+  uint32 storage_capacity = 2;
+}
+
+message Upgrades {
+  StorageUpgrades storage_upgrades = 1;
+}
+
+message GetBaseResponse {
+  Upgrades upgrades = 1;
+}
+
+enum UpgradeType {
+  Storage = 0;
+}
+
+message UpgradeBaseRequest {
+  UpgradeType upgrade_type = 1;
+}
+
+message UpgradeBaseResponse {
+  Upgrades upgrades = 1;
+}

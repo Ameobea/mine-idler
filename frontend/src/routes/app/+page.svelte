@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { QueryClient, QueryClientProvider } from '@sveltestack/svelte-query';
+
   import { AppLoaded, getAppStateInitStarted, initAppState } from '../../state';
   import MainApp from './MainApp.svelte';
   import { goto } from '$app/navigation';
@@ -15,10 +17,14 @@
       initAppState();
     }
   });
+
+  const queryClient = new QueryClient();
 </script>
 
 {#if !$AppLoaded}
   <div>Loading...</div>
 {:else}
-  <MainApp />
+  <QueryClientProvider client={queryClient}>
+    <MainApp />
+  </QueryClientProvider>
 {/if}

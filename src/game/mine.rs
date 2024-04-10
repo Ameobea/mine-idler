@@ -3,6 +3,7 @@ use std::time::Instant;
 use dashmap::DashMap;
 use foundations::BootstrapResult;
 use futures::Stream;
+use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use rand::{rngs::OsRng, SeedableRng};
@@ -11,7 +12,10 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
 use uuid::Uuid;
 
-use crate::{db::NewInventoryItem, protos::StartMiningResponse};
+use crate::{
+  db::{get_available_inventory_space, NewInventoryItem},
+  protos::StartMiningResponse,
+};
 
 use super::items::mine_locations;
 
@@ -32,6 +36,21 @@ fn inventory_item_save_tx() -> &'static mpsc::Sender<NewInventoryItem> {
     .expect("Inventory item saver not initialized")
 }
 
+fn check_inventory_space(user_ids: Vec<i32>) -> impl std::future::Future<Output = ()> {
+  async move {
+    let mut unique_user_ids = FxHashSet::default();
+    unique_user_ids.extend(user_ids);
+
+    for user_id in unique_user_ids {
+      let available_inventory_space = get_available_inventory_space(user_id).await.unwrap_or(0);
+      if available_inventory_space <= 0 {
+        warn!("User {user_id} inventory full; stopping mining session");
+        stop_mining(user_id).await;
+      }
+    }
+  }
+}
+
 pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
   let (tx, mut rx) = mpsc::channel(10);
   INVENTORY_ITEM_SAVE_TX
@@ -41,6 +60,7 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
   tokio::task::spawn(async move {
     let mut last_save_time = Instant::now();
     let mut items_to_save = Vec::new();
+    let mut unique_user_ids = Vec::default();
 
     loop {
       let res = tokio::time::timeout(tokio::time::Duration::from_millis(1350), rx.recv()).await;
@@ -52,7 +72,11 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
         continue;
       }
 
-      if last_save_time.elapsed().as_secs() >= 2 {
+      if last_save_time.elapsed().as_secs() >= 2 || items_to_save.len() >= 100 {
+        unique_user_ids.extend(items_to_save.iter().map(|item| item.user_id));
+        unique_user_ids.sort_unstable();
+        unique_user_ids.dedup();
+
         match crate::db::insert_inventory_items(&items_to_save).await {
           Err(err) => {
             error!("Failed to save inventory items: {err:?}");
@@ -62,6 +86,8 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
             last_save_time = Instant::now();
           },
         }
+
+        tokio::task::spawn(check_inventory_space(std::mem::take(&mut unique_user_ids)));
       }
     }
   });
@@ -90,6 +116,16 @@ pub async fn start_mining(
 
   let (tx, rx) = mpsc::channel(10);
   let mut rng = pcg_rand::Pcg64::from_rng(OsRng).unwrap();
+
+  let available_inventory_space = get_available_inventory_space(user_id)
+    .await
+    .map_err(|err| {
+      error!("Failed to get available inventory space: {err}");
+      Status::internal("Internal DB error")
+    })?;
+  if available_inventory_space <= 0 {
+    return Err(Status::resource_exhausted("Inventory full"));
+  }
 
   info!("User {user_id} started mining at location {location_name}");
 

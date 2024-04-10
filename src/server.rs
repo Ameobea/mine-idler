@@ -1,7 +1,7 @@
 use std::{pin::Pin, time::Duration};
 
 use foundations::BootstrapResult;
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, TryFutureExt};
 use tonic::{codec::CompressionEncoding, transport::Body, Request, Response, Status};
 use tonic_middleware::{InterceptorFor, RequestInterceptor};
 use tonic_web::GrpcWebLayer;
@@ -21,10 +21,12 @@ use crate::{
   protos::{
     mine_private_service_server::{MinePrivateService, MinePrivateServiceServer},
     mine_public_service_server::{MinePublicService, MinePublicServiceServer},
-    GetAccountRequest, GetAccountResponse, GetInventoryRequest, GetInventoryResponse,
-    GetItemDescriptorsRequest, GetMineLocationsRequest, GetMineLocationsResponse, LoginRequest,
-    LoginResponse, MineLocationRes, RegisterRequest, RegisterResponse, SortBy, SortDirection,
-    StartMiningRequest, StartMiningResponse, StopMiningRequest, StopMiningResponse,
+    GetAccountRequest, GetAccountResponse, GetBaseRequest, GetBaseResponse, GetHiscoresRequest,
+    GetHiscoresResponse, GetInventoryRequest, GetInventoryResponse, GetItemDescriptorsRequest,
+    GetMineLocationsRequest, GetMineLocationsResponse, LoginRequest, LoginResponse,
+    MineLocationRes, RegisterRequest, RegisterResponse, SortBy, SortDirection, StartMiningRequest,
+    StartMiningResponse, StopMiningRequest, StopMiningResponse, UpgradeBaseRequest,
+    UpgradeBaseResponse,
   },
 };
 
@@ -96,6 +98,21 @@ impl MinePrivateService for MinePrivateServer {
     }
   }
 
+  async fn get_base(
+    &self,
+    req: Request<GetBaseRequest>,
+  ) -> Result<Response<GetBaseResponse>, Status> {
+    let user_id = req.user_id();
+    let upgrades = crate::db::get_user_upgrades(user_id).await.map_err(|err| {
+      error!("Error reading user upgrades from database: {err}");
+      Status::internal("Internal DB error fetching upgrades")
+    })?;
+
+    Ok(Response::new(GetBaseResponse {
+      upgrades: Some(upgrades),
+    }))
+  }
+
   async fn get_inventory(
     &self,
     req: Request<GetInventoryRequest>,
@@ -111,15 +128,22 @@ impl MinePrivateService for MinePrivateServer {
     let sort_by = SortBy::try_from(sort_by).unwrap_or(SortBy::DateAcquired);
     let sort_direction =
       SortDirection::try_from(sort_direction).unwrap_or(SortDirection::Descending);
-    let items =
+    let (items, total_items) = tokio::try_join!(
       crate::db::get_user_inventory(user_id, page_size, page_number, sort_by, sort_direction)
-        .await
         .map_err(|err| {
           error!("Error reading user inventory from database: {err}");
           Status::internal("Internal DB error fetching inventory")
-        })?;
+        }),
+      crate::db::get_user_inventory_count(user_id).map_err(|err| {
+        error!("Error reading user inventory count from database: {err}");
+        Status::internal("Internal DB error fetching inventory count")
+      })
+    )?;
 
-    Ok(Response::new(GetInventoryResponse { items }))
+    Ok(Response::new(GetInventoryResponse {
+      items,
+      total_items: total_items.unwrap_or(0) as _,
+    }))
   }
 
   // Gameplay
@@ -142,6 +166,17 @@ impl MinePrivateService for MinePrivateServer {
     let user_id = req.user_id();
     stop_mining(user_id).await;
     Ok(Response::new(StopMiningResponse {}))
+  }
+
+  async fn upgrade_base(
+    &self,
+    req: Request<UpgradeBaseRequest>,
+  ) -> Result<Response<UpgradeBaseResponse>, Status> {
+    let user_id = req.user_id();
+    let upgrades = crate::game::upgrades::upgrade_base(user_id, req.into_inner()).await?;
+    Ok(Response::new(UpgradeBaseResponse {
+      upgrades: Some(upgrades),
+    }))
   }
 }
 
@@ -181,6 +216,18 @@ impl MinePublicService for MinePublicServer {
 
     info!("User {username} successfully registered");
     Ok(Response::new(RegisterResponse { session_token }))
+  }
+
+  async fn get_hiscores(
+    &self,
+    _req: Request<GetHiscoresRequest>,
+  ) -> Result<Response<GetHiscoresResponse>, Status> {
+    let hiscores = crate::db::get_hiscores().await.map_err(|err| {
+      error!("Error reading hiscores from database: {err}");
+      Status::internal("Internal DB error fetching hiscores")
+    })?;
+
+    Ok(Response::new(GetHiscoresResponse { hiscores }))
   }
 }
 

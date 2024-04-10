@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use foundations::BootstrapResult;
+use fxhash::FxHashMap;
 use once_cell::sync::OnceCell;
 use sqlx::{
   pool::PoolOptions,
@@ -8,12 +9,19 @@ use sqlx::{
   FromRow, Pool, Postgres,
 };
 use tonic::Status;
+use uuid::Uuid;
 
 use crate::{
   auth::hash_password,
   conf::Settings,
-  game::items::populate_items_table,
-  protos::{Item, ItemDescriptor, SortBy, SortDirection, UserAccountInfo},
+  game::{
+    items::{get_item_name_by_id, populate_items_table},
+    upgrades::{BASE_INVENTORY_SIZE, INVENTORY_CAPACITY_PER_UPGRADE},
+  },
+  protos::{
+    HiscoreEntry, Item, ItemDescriptor, SortBy, SortDirection, StorageUpgrades, Upgrades,
+    UserAccountInfo,
+  },
 };
 
 static DB_POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
@@ -44,7 +52,7 @@ pub async fn init_db(settings: &Settings) -> BootstrapResult<()> {
   Ok(())
 }
 
-fn pool() -> &'static Pool<Postgres> { DB_POOL.get().expect("Database pool not initialized") }
+pub fn pool() -> &'static Pool<Postgres> { DB_POOL.get().expect("Database pool not initialized") }
 
 /// If the session token is valid, returns the ID of the logged-in user.
 pub async fn validate_session_token(
@@ -199,6 +207,15 @@ pub async fn get_user_account(user_id: i32) -> sqlx::Result<Option<UserAccountIn
   .await
 }
 
+#[derive(FromRow)]
+pub struct DbItem {
+  id: Uuid,
+  item_id: i32,
+  quality: f32,
+  value: f32,
+  modifiers: Option<serde_json::Value>,
+}
+
 pub(crate) async fn get_user_inventory(
   user_id: i32,
   page_size: u32,
@@ -216,18 +233,10 @@ pub(crate) async fn get_user_inventory(
     SortDirection::Descending => "DESC",
   };
 
-  #[derive(FromRow)]
-  struct DbItem {
-    item_id: i32,
-    quality: f32,
-    value: f32,
-    modifiers: Option<serde_json::Value>,
-  }
-
   let items: Vec<DbItem> = sqlx::query_as(&format!(
-    "SELECT inv.item_id, inv.quality, inv.value, inv.modifiers FROM inventory inv JOIN items i ON \
-     inv.item_id = i.id WHERE inv.user_id = $1 ORDER BY {sort_column} {sort_direction} LIMIT $2 \
-     OFFSET $3"
+    "SELECT inv.id, inv.item_id, inv.quality, inv.value, inv.modifiers FROM inventory inv JOIN \
+     items i ON inv.item_id = i.id WHERE inv.user_id = $1 ORDER BY {sort_column} {sort_direction} \
+     LIMIT $2 OFFSET $3"
   ))
   .bind(user_id)
   .bind(page_size.clamp(0, 1000) as i32)
@@ -262,4 +271,152 @@ pub(crate) async fn get_user_inventory(
       })
       .collect::<Result<_, _>>()?,
   )
+}
+
+pub async fn get_hiscores() -> sqlx::Result<Vec<HiscoreEntry>> {
+  let rows = sqlx::query!(
+    "SELECT u.username, SUM(inv.value) AS total_value FROM inventory inv INNER JOIN users u ON \
+     inv.user_id = u.id GROUP BY u.username ORDER BY total_value DESC LIMIT 100"
+  )
+  .fetch_all(pool())
+  .await?;
+
+  Ok(
+    rows
+      .into_iter()
+      .map(|row| HiscoreEntry {
+        username: row.username,
+        total_value: row.total_value.unwrap_or_default(),
+      })
+      .collect(),
+  )
+}
+
+pub async fn get_user_inventory_count(user_id: i32) -> sqlx::Result<Option<i64>> {
+  let count = sqlx::query_scalar!("SELECT COUNT(*) FROM inventory WHERE user_id = $1", user_id)
+    .fetch_one(pool())
+    .await?;
+  Ok(count)
+}
+
+pub async fn get_user_storage_upgrade_level(user_id: i32) -> sqlx::Result<i32> {
+  sqlx::query_scalar!(
+    "SELECT storage_level FROM bases WHERE user_id = $1",
+    user_id,
+  )
+  .fetch_optional(pool())
+  .await
+  .map(|row| row.unwrap_or(0))
+}
+
+pub async fn get_available_inventory_space(user_id: i32) -> sqlx::Result<i32> {
+  let item_count = get_user_inventory_count(user_id).await?.unwrap_or(0);
+
+  let inventory_upgrade_level = get_user_storage_upgrade_level(user_id).await?;
+  let inventory_capacity =
+    BASE_INVENTORY_SIZE as i32 + inventory_upgrade_level * INVENTORY_CAPACITY_PER_UPGRADE as i32;
+
+  Ok(inventory_capacity - item_count as i32)
+}
+
+/// Locks a user's inventory for use in a transaction.  Returns all items in the user's inventory.
+pub async fn lock_user_inventory(
+  txn: &mut sqlx::Transaction<'_, Postgres>,
+  user_id: i32,
+) -> sqlx::Result<Vec<DbItem>> {
+  sqlx::query_as!(
+    DbItem,
+    "SELECT id, item_id, quality, value, modifiers FROM inventory WHERE user_id = $1 FOR UPDATE",
+    user_id
+  )
+  .fetch_all(&mut **txn)
+  .await
+}
+
+pub struct InventoryDebit {
+  pub item_id: u32,
+  pub total_quality: f32,
+}
+
+pub async fn debit_user_inventory(
+  txn: &mut sqlx::Transaction<'_, Postgres>,
+  user_id: i32,
+  debits: &[InventoryDebit],
+) -> Result<(), Status> {
+  let inventory = lock_user_inventory(txn, user_id).await.map_err(|err| {
+    error!("Failed to lock user inventory: {err}");
+    Status::internal("Internal DB error")
+  })?;
+  let mut items_by_id: FxHashMap<i32, Vec<DbItem>> =
+    inventory
+      .into_iter()
+      .fold(FxHashMap::default(), |mut map, item| {
+        map.entry(item.item_id).or_insert_with(Vec::new).push(item);
+        map
+      });
+
+  // We debit items from lowest quality to highest, so we sort the items from highest to lowest
+  // quality
+  for items in items_by_id.values_mut() {
+    items.sort_unstable_by(|a, b| b.quality.partial_cmp(&a.quality).unwrap());
+  }
+
+  let mut item_ids_to_delete = Vec::new();
+  for debit in debits {
+    let item = items_by_id.get_mut(&(debit.item_id as _)).ok_or_else(|| {
+      Status::not_found(format!(
+        "Item {:?} not found in inventory",
+        get_item_name_by_id(debit.item_id as u32)
+      ))
+    })?;
+    let mut remaining_quality = debit.total_quality;
+
+    // Pop items from the back of the list - taking the lowest quality items first - until we've
+    // debited the total quality
+    while let Some(item) = item.pop() {
+      remaining_quality -= item.quality;
+      item_ids_to_delete.push(item.id);
+    }
+
+    if remaining_quality > 0.0 {
+      return Err(Status::invalid_argument(format!(
+        "Not enough quality in inventory for item {:?}; missing {} total quality",
+        get_item_name_by_id(debit.item_id as u32),
+        remaining_quality
+      )));
+    }
+  }
+
+  // Delete the items that were debited
+  sqlx::query!(
+    "DELETE FROM inventory WHERE id = ANY($1::uuid[])",
+    &item_ids_to_delete
+  )
+  .execute(&mut **txn)
+  .await
+  .map_err(|err| {
+    error!("Failed to delete debited items: {err}");
+    Status::internal("Internal DB error")
+  })?;
+
+  Ok(())
+}
+
+pub(crate) async fn get_user_upgrades(user_id: i32) -> sqlx::Result<Upgrades> {
+  let storage_upgrade_level = sqlx::query_scalar!(
+    "SELECT storage_level FROM bases WHERE user_id = $1",
+    user_id,
+  )
+  .fetch_optional(pool())
+  .await?;
+
+  let total_inventory_capacity = BASE_INVENTORY_SIZE as i32
+    + storage_upgrade_level.unwrap_or(0) * INVENTORY_CAPACITY_PER_UPGRADE as i32;
+
+  Ok(Upgrades {
+    storage_upgrades: Some(StorageUpgrades {
+      storage_capacity: total_inventory_capacity as _,
+      storage_level: storage_upgrade_level.unwrap_or(0) as _,
+    }),
+  })
 }

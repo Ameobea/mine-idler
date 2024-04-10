@@ -7,47 +7,57 @@
   import LootTable from './LootTable.svelte';
   import { writable, type Writable } from 'svelte/store';
   import { GlobalState } from '../../../state';
+  import { delay } from '../../../util';
 
   export let session: MineSession;
 
   let lootStream: AsyncIterable<StartMiningResponse> | null = null;
   let loot: Writable<Item[]> = writable([]);
   let error: string | null = null;
+  let imageHidden = localStorage.getItem('imageHidden') === 'true';
+
+  const setImageHidden = (value: boolean) => {
+    imageHidden = value;
+    localStorage.setItem('imageHidden', value.toString());
+  };
 
   let lastMinedItem: { item: Item; desc: ItemDescriptor } | null = null;
 
   onMount(async () => {
-    try {
-      error = null;
+    while (true) {
+      try {
+        error = null;
 
-      let lastError;
+        let lastError;
 
-      lootStream = PrivateClient.startMining({ locationName: session.locationName });
+        lootStream = PrivateClient.startMining({ locationName: session.locationName });
 
-      if (!lootStream) {
-        throw lastError;
+        if (!lootStream) {
+          throw lastError;
+        }
+
+        for await (const res of lootStream) {
+          loot.update((prev) => {
+            prev.push(res.loot!);
+            return prev;
+          });
+
+          const desc = $GlobalState.itemsById.get(res.loot!.id)!;
+          lastMinedItem = { item: res.loot!, desc };
+          setTimeout(() => {
+            if (lastMinedItem?.item === res.loot) {
+              lastMinedItem = null;
+            }
+          }, 4000);
+        }
+
+        break;
+      } catch (err) {
+        error = `Failed to start mining: ${err}`;
+      } finally {
+        lootStream = null;
+        await delay(1500);
       }
-
-      for await (const res of lootStream) {
-        loot.update((prev) => {
-          prev.push(res.loot!);
-          return prev;
-        });
-
-        const desc = $GlobalState.itemsById.get(res.loot!.id)!;
-        lastMinedItem = { item: res.loot!, desc };
-        setTimeout(() => {
-          if (lastMinedItem?.item === res.loot) {
-            lastMinedItem = null;
-          }
-        }, 4000);
-      }
-
-      lootStream = null;
-      // TODO
-    } catch (err) {
-      lootStream = null;
-      error = `Failed to start mining: ${err}`;
     }
   });
 </script>
@@ -56,28 +66,45 @@
   <h2>Mining at {session.locationDisplayName}</h2>
 
   {#if error}
-    <div class="error">{error}</div>
+    <div class="error">Error occurred while mining; trying to restart...</div>
   {/if}
 
   {#if lootStream}
     <div class="session-container">
-      <div>
-        <div class="last-mined-item-image-container">
-          {#if lastMinedItem}
-            <img
-              style="width: 100%; height: 100%;"
-              src={`${ImageBaseURL}${lastMinedItem.desc.name}.webp`}
-              alt={lastMinedItem.desc.description}
-            />
+      <div style="width:300px;margin-left: auto;margin-right: auto;">
+        <span
+          class="toggle-image"
+          role="button"
+          tabindex="0"
+          on:click|preventDefault={() => setImageHidden(!imageHidden)}
+          on:keydown|preventDefault={(e) => e.key === 'Enter' && setImageHidden(!imageHidden)}
+          style={imageHidden ? 'text-align: center' : undefined}
+        >
+          {#if imageHidden}
+            Show
           {:else}
-            <div class="mining-in-progress">Mining...</div>
+            Hide
           {/if}
-        </div>
-        <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
-          {#if lastMinedItem}
-            {lastMinedItem.desc.displayName}
-          {/if}
-        </p>
+          image
+        </span>
+        {#if !imageHidden}
+          <div class="last-mined-item-image-container">
+            {#if lastMinedItem}
+              <img
+                style="width: 100%; height: 100%;"
+                src={`${ImageBaseURL}${lastMinedItem.desc.name}.webp`}
+                alt={lastMinedItem.desc.description}
+              />
+            {:else}
+              <div class="mining-in-progress">Mining...</div>
+            {/if}
+          </div>
+          <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
+            {#if lastMinedItem}
+              {lastMinedItem.desc.displayName}
+            {/if}
+          </p>
+        {/if}
       </div>
 
       <div class="session-display">
@@ -91,7 +118,7 @@
         </div>
       </div>
     </div>
-  {:else}
+  {:else if !error}
     <div>Loading...</div>
   {/if}
 </div>
@@ -128,9 +155,19 @@
   .last-mined-item-image-container {
     width: 300px;
     height: 300px;
-    margin-left: auto;
-    margin-right: auto;
     border: 1px solid #999;
+  }
+
+  .toggle-image {
+    display: block;
+    margin-bottom: 3px;
+    color: rgb(238, 238, 238);
+    font-size: 13.5px;
+    text-decoration: underline;
+  }
+
+  .toggle-image:hover {
+    cursor: pointer;
   }
 
   .mining-in-progress {

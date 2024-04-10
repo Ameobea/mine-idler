@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { PrivateClient } from '../../api';
   import { GlobalState } from '../../state';
+  import BackToOverviewButton from '../BackToOverviewButton.svelte';
   import MineSession from './MineSession/MineSession.svelte';
   import type { MineSession as MineSessionTy } from './types';
 
@@ -7,6 +9,8 @@
 </script>
 
 <div class="root">
+  <BackToOverviewButton predicate={() => PrivateClient.stopMining({})} />
+
   {#if !$GlobalState.mineLocations}
     <div>Loading...</div>
   {:else if !curMineSession}

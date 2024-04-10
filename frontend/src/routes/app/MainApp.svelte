@@ -1,23 +1,22 @@
 <script lang="ts">
-  import { AppRoute } from '$lib/AppRoute';
+  import { AppRoute, CurRoute } from '$lib/AppRoute';
   import MineHome from '../../components/Mine/MineHome.svelte';
   import Overview from '../../components/Overview/Overview.svelte';
   import Inventory from '../../components/Inventory/Inventory.svelte';
+  import Hiscores from '../../components/Hiscores/Hiscores.svelte';
 
-  let route: AppRoute = AppRoute.Overview;
-
-  const setRoute = (newRoute: AppRoute) => {
-    route = newRoute;
-  };
+  const setRoute = (newRoute: AppRoute) => CurRoute.set(newRoute);
 </script>
 
 <div class="root">
-  {#if route === AppRoute.Overview}
+  {#if $CurRoute === AppRoute.Overview}
     <Overview {setRoute} />
-  {:else if route === AppRoute.Mine}
+  {:else if $CurRoute === AppRoute.Mine}
     <MineHome />
-  {:else if route === AppRoute.Inventory}
+  {:else if $CurRoute === AppRoute.Inventory}
     <Inventory />
+  {:else if $CurRoute === AppRoute.Hiscores}
+    <Hiscores />
   {/if}
 </div>
 

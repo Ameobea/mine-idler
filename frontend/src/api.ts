@@ -1,9 +1,10 @@
 import { type Code, ConnectError, createPromiseClient, type Interceptor } from '@connectrpc/connect';
 import { createGrpcWebTransport } from '@connectrpc/connect-web';
+import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
 import { MinePrivateService, MinePublicService } from './protos/mine_connect';
 
-const BaseURL = 'http://localhost:5900';
+const BaseURL = PUBLIC_API_BASE_URL ?? 'http://localhost:5900';
 
 export const ImageBaseURL = 'https://mine-idler.b-cdn.net/';
 

@@ -2,3 +2,9 @@ set dotenv-load := true
 
 run:
   yarn dev --port 7879
+
+build:
+  PUBLIC_API_BASE_URL="https://mine-idler-api.ameo.dev" yarn build
+
+deploy:
+  phost update mine patch build

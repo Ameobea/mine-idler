@@ -40,6 +40,8 @@ fn get_item_descriptor_by_id(id: u32) -> &'static ItemDescriptor {
     .unwrap_or_else(|| panic!("Item with ID {id} not found"))
 }
 
+pub fn get_item_name_by_id(id: u32) -> &'static str { &get_item_descriptor_by_id(id).name }
+
 pub async fn populate_items_table() -> BootstrapResult<()> {
   let item_tables = [include_str!("item_tables/loot.yml")];
 

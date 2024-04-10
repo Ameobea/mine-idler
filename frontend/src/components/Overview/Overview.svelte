@@ -8,6 +8,7 @@
   <div class="nav">
     <button on:click={() => setRoute(AppRoute.Mine)}>Mine</button>
     <button on:click={() => setRoute(AppRoute.Inventory)}>Inventory</button>
+    <button on:click={() => setRoute(AppRoute.Hiscores)}>Hiscores</button>
   </div>
 </div>
 

@@ -34,7 +34,8 @@
     "@bufbuild/protobuf": "^1.8.0",
     "@connectrpc/connect": "^1.4.0",
     "@connectrpc/connect-web": "^1.4",
-    "@sveltejs/adapter-static": "^3.0.1"
+    "@sveltejs/adapter-static": "^3.0.1",
+    "@sveltestack/svelte-query": "^1.6.0"
   },
   "type": "module"
 }
