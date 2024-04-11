@@ -2,3 +2,11 @@
   name: starter
   display_name: Landfill
   description: The remains of a sprawling landfill, full of hundreds-of-years-old trash
+- id: 1
+  name: sewers
+  display_name: Ancient Sewers
+  description: >
+    Long ago, these served as part of a globe-spanning infrastructure network - carrying water and waste through 200-meter tall pipes.
+
+
+    Now, they are stagnant and serve as a huge collection basin for all manner of detritus from above.

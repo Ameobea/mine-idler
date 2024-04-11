@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{cmp::Reverse, time::Duration};
 
 use foundations::BootstrapResult;
 use fxhash::FxHashMap;
@@ -15,12 +15,12 @@ use crate::{
   auth::hash_password,
   conf::Settings,
   game::{
-    items::{get_item_name_by_id, populate_items_table},
-    upgrades::{BASE_INVENTORY_SIZE, INVENTORY_CAPACITY_PER_UPGRADE},
+    items::{get_item_display_name_by_id, populate_items_table},
+    upgrades::{get_inventory_upgrade_cost, BASE_INVENTORY_SIZE, INVENTORY_CAPACITY_PER_UPGRADE},
   },
   protos::{
-    HiscoreEntry, Item, ItemDescriptor, SortBy, SortDirection, StorageUpgrades, Upgrades,
-    UserAccountInfo,
+    AggregatedInventory, AggregatedItemCount, HiscoreEntry, Item, ItemCost, ItemDescriptor,
+    ItemQualityHistogram, SortBy, SortDirection, StorageUpgrades, Upgrades, UserAccountInfo,
   },
 };
 
@@ -142,6 +142,17 @@ pub async fn insert_new_user(username: &str, password: &str) -> Result<i32, Stat
 
     error!("Error inserting new user: {err}");
     Status::internal("Internal error registering user")
+  })?;
+
+  sqlx::query!(
+    "INSERT INTO bases (user_id) VALUES ($1) ON CONFLICT DO NOTHING",
+    user_id,
+  )
+  .execute(pool())
+  .await
+  .map_err(|err| {
+    error!("Failed to insert base row: {err}");
+    Status::internal("Internal DB error")
   })?;
 
   Ok(user_id)
@@ -273,6 +284,80 @@ pub(crate) async fn get_user_inventory(
   )
 }
 
+pub async fn get_user_aggregated_inventory(user_id: i32) -> sqlx::Result<AggregatedInventory> {
+  // We want total item count for each item ID in the user's inventory along with histogram buckets
+  // for the quality distribution of each item.
+  //
+  // Quality is hard-capped from [0,1], and we used 32 fixed buckets for now.
+  let rows = sqlx::query!(
+    "SELECT item_id, COUNT(*) as total_count, SUM(quality) as total_quality, SUM(value) as \
+     total_value, width_bucket(quality, 0, 1, 32) AS quality_bucket_ix FROM inventory WHERE \
+     user_id = $1 GROUP BY item_id, quality_bucket_ix",
+    user_id
+  )
+  .fetch_all(pool())
+  .await?;
+
+  struct QualityBucket {
+    bucket_ix: u32,
+    total_count: u32,
+    total_quality: f32,
+    total_value: f32,
+  }
+
+  let mut counts_by_item_id: FxHashMap<i32, Vec<QualityBucket>> = FxHashMap::default();
+  for row in rows {
+    let item_id = row.item_id as i32;
+    let quality_bucket_ix = row.quality_bucket_ix.unwrap_or(0) as u32;
+    let total_count = row.total_count.unwrap_or(0);
+    let total_quality = row.total_quality.unwrap_or(0.);
+    let total_value = row.total_value.unwrap_or(0.);
+
+    counts_by_item_id
+      .entry(item_id)
+      .or_insert_with(Vec::new)
+      .push(QualityBucket {
+        bucket_ix: quality_bucket_ix,
+        total_count: total_count as _,
+        total_quality,
+        total_value,
+      });
+  }
+
+  for bucket in counts_by_item_id.values_mut() {
+    for i in 1..=32 {
+      if !bucket.iter().any(|b| b.bucket_ix == i) {
+        bucket.push(QualityBucket {
+          bucket_ix: i,
+          total_count: 0,
+          total_quality: 0.,
+          total_value: 0.,
+        });
+      }
+    }
+    bucket.sort_unstable_by_key(|b| b.bucket_ix);
+  }
+
+  let mut item_counts: Vec<_> = counts_by_item_id
+    .into_iter()
+    .map(|(item_id, buckets)| AggregatedItemCount {
+      item_id: item_id as _,
+      total_count: buckets.iter().map(|b| b.total_count).sum(),
+      total_quality: buckets.iter().map(|b| b.total_quality).sum(),
+      total_value: buckets.iter().map(|b| b.total_value).sum(),
+      quality_histogram: Some(ItemQualityHistogram {
+        buckets: buckets
+          .into_iter()
+          .map(|bucket| bucket.total_count)
+          .collect(),
+      }),
+    })
+    .collect();
+  item_counts.sort_unstable_by_key(|count| Reverse(count.total_count));
+
+  Ok(AggregatedInventory { item_counts })
+}
+
 pub async fn get_hiscores() -> sqlx::Result<Vec<HiscoreEntry>> {
   let rows = sqlx::query!(
     "SELECT u.username, SUM(inv.value) AS total_value FROM inventory inv INNER JOIN users u ON \
@@ -333,15 +418,10 @@ pub async fn lock_user_inventory(
   .await
 }
 
-pub struct InventoryDebit {
-  pub item_id: u32,
-  pub total_quality: f32,
-}
-
 pub async fn debit_user_inventory(
   txn: &mut sqlx::Transaction<'_, Postgres>,
   user_id: i32,
-  debits: &[InventoryDebit],
+  debits: &[ItemCost],
 ) -> Result<(), Status> {
   let inventory = lock_user_inventory(txn, user_id).await.map_err(|err| {
     error!("Failed to lock user inventory: {err}");
@@ -366,7 +446,7 @@ pub async fn debit_user_inventory(
     let item = items_by_id.get_mut(&(debit.item_id as _)).ok_or_else(|| {
       Status::not_found(format!(
         "Item {:?} not found in inventory",
-        get_item_name_by_id(debit.item_id as u32)
+        get_item_display_name_by_id(debit.item_id as u32)
       ))
     })?;
     let mut remaining_quality = debit.total_quality;
@@ -374,14 +454,17 @@ pub async fn debit_user_inventory(
     // Pop items from the back of the list - taking the lowest quality items first - until we've
     // debited the total quality
     while let Some(item) = item.pop() {
-      remaining_quality -= item.quality;
       item_ids_to_delete.push(item.id);
+      remaining_quality -= item.quality;
+      if remaining_quality <= 0.0 {
+        break;
+      }
     }
 
     if remaining_quality > 0.0 {
-      return Err(Status::invalid_argument(format!(
+      return Err(Status::resource_exhausted(format!(
         "Not enough quality in inventory for item {:?}; missing {} total quality",
-        get_item_name_by_id(debit.item_id as u32),
+        get_item_display_name_by_id(debit.item_id as u32),
         remaining_quality
       )));
     }
@@ -412,11 +495,13 @@ pub(crate) async fn get_user_upgrades(user_id: i32) -> sqlx::Result<Upgrades> {
 
   let total_inventory_capacity = BASE_INVENTORY_SIZE as i32
     + storage_upgrade_level.unwrap_or(0) * INVENTORY_CAPACITY_PER_UPGRADE as i32;
+  let storage_level = storage_upgrade_level.unwrap_or(0) as _;
 
   Ok(Upgrades {
     storage_upgrades: Some(StorageUpgrades {
       storage_capacity: total_inventory_capacity as _,
-      storage_level: storage_upgrade_level.unwrap_or(0) as _,
+      storage_level,
+      upgrade_cost: get_inventory_upgrade_cost(storage_level).to_vec(),
     }),
   })
 }

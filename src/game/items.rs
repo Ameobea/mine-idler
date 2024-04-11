@@ -32,6 +32,10 @@ pub fn get_item_id_by_name(name: &str) -> u32 {
     .unwrap_or_else(|| panic!("Item with name {name} not found"))
 }
 
+pub fn get_item_display_name_by_id(id: u32) -> &'static str {
+  &get_item_descriptor_by_id(id).display_name
+}
+
 fn get_item_descriptor_by_id(id: u32) -> &'static ItemDescriptor {
   ITEM_DESCRIPTOR_BY_ID
     .get()
@@ -39,8 +43,6 @@ fn get_item_descriptor_by_id(id: u32) -> &'static ItemDescriptor {
     .get(&id)
     .unwrap_or_else(|| panic!("Item with ID {id} not found"))
 }
-
-pub fn get_item_name_by_id(id: u32) -> &'static str { &get_item_descriptor_by_id(id).name }
 
 pub async fn populate_items_table() -> BootstrapResult<()> {
   let item_tables = [include_str!("item_tables/loot.yml")];
@@ -244,7 +246,10 @@ pub fn init_loot_tables() -> BootstrapResult<()> {
   let location_descriptors: Vec<MineLocationDescriptor> =
     serde_yaml::from_str(include_str!("mine_locations.yml"))?;
 
-  let loot_tables = [("starter", include_str!("loot_tables/starter.yml"))];
+  let loot_tables = [
+    ("starter", include_str!("loot_tables/starter.yml")),
+    ("sewers", include_str!("loot_tables/sewers.yml")),
+  ];
 
   let mut locations = Vec::new();
   for descriptor in location_descriptors {

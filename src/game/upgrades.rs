@@ -1,28 +1,28 @@
 use tonic::Status;
 
 use crate::{
-  db::{debit_user_inventory, get_user_upgrades, pool, InventoryDebit},
-  protos::{UpgradeBaseRequest, UpgradeType, Upgrades},
+  db::{debit_user_inventory, get_user_upgrades, pool},
+  protos::{ItemCost, UpgradeBaseRequest, UpgradeType, Upgrades},
 };
 
 use super::items::get_item_id_by_name;
 
-pub const BASE_INVENTORY_SIZE: u32 = 10_000;
+pub const BASE_INVENTORY_SIZE: u32 = 5_000;
 pub const INVENTORY_CAPACITY_PER_UPGRADE: u32 = 1_000;
 
-fn get_inventory_upgrade_cost(level: u32) -> [InventoryDebit; 3] {
-  let base_cost = 80.0f32 * (1.25f32).powf(0.8 * level as f32) + 500.;
+pub fn get_inventory_upgrade_cost(level: u32) -> [ItemCost; 3] {
+  let base_cost = (3. * (level + 1) as f32) * 1.18_f32.powf(0.33 * level as f32);
 
   [
-    InventoryDebit {
+    ItemCost {
       item_id: get_item_id_by_name("wooden_palette"),
       total_quality: base_cost * 1.25,
     },
-    InventoryDebit {
+    ItemCost {
       item_id: get_item_id_by_name("wooden_beam"),
       total_quality: base_cost,
     },
-    InventoryDebit {
+    ItemCost {
       item_id: get_item_id_by_name("roof_shingles"),
       total_quality: base_cost * 0.8,
     },
@@ -32,6 +32,18 @@ fn get_inventory_upgrade_cost(level: u32) -> [InventoryDebit; 3] {
 pub async fn upgrade_inventory_storage(user_id: i32) -> Result<(), Status> {
   let mut txn = pool().begin().await.map_err(|err| {
     error!("Failed to start transaction: {err}");
+    Status::internal("Internal DB error")
+  })?;
+
+  // Insert a row if it doesn't exist
+  sqlx::query!(
+    "INSERT INTO bases (user_id) VALUES ($1) ON CONFLICT DO NOTHING",
+    user_id,
+  )
+  .execute(&mut *txn)
+  .await
+  .map_err(|err| {
+    error!("Failed to insert base row: {err}");
     Status::internal("Internal DB error")
   })?;
 

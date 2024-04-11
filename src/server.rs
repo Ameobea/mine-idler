@@ -1,7 +1,7 @@
 use std::{pin::Pin, time::Duration};
 
 use foundations::BootstrapResult;
-use futures::{Stream, StreamExt, TryFutureExt};
+use futures::{Stream, TryFutureExt};
 use tonic::{codec::CompressionEncoding, transport::Body, Request, Response, Status};
 use tonic_middleware::{InterceptorFor, RequestInterceptor};
 use tonic_web::GrpcWebLayer;
@@ -16,7 +16,7 @@ use crate::{
   db::{insert_session_token, validate_session_token},
   game::{
     items::mine_locations,
-    mine::{start_mining, stop_mining},
+    mine::{start_mining, stop_mining, StopMiningReason},
   },
   protos::{
     mine_private_service_server::{MinePrivateService, MinePrivateServiceServer},
@@ -73,7 +73,7 @@ impl MinePrivateService for MinePrivateServer {
         .iter()
         .map(|loc| MineLocationRes {
           descriptor: Some(loc.descriptor.clone()),
-          is_available: true, // TODO
+          is_available: loc.descriptor.id == 0, // TODO
         })
         .collect(),
     }))
@@ -128,21 +128,27 @@ impl MinePrivateService for MinePrivateServer {
     let sort_by = SortBy::try_from(sort_by).unwrap_or(SortBy::DateAcquired);
     let sort_direction =
       SortDirection::try_from(sort_direction).unwrap_or(SortDirection::Descending);
-    let (items, total_items) = tokio::try_join!(
+    let (items, aggregated_inventory) = tokio::try_join!(
       crate::db::get_user_inventory(user_id, page_size, page_number, sort_by, sort_direction)
         .map_err(|err| {
           error!("Error reading user inventory from database: {err}");
           Status::internal("Internal DB error fetching inventory")
         }),
-      crate::db::get_user_inventory_count(user_id).map_err(|err| {
-        error!("Error reading user inventory count from database: {err}");
-        Status::internal("Internal DB error fetching inventory count")
+      crate::db::get_user_aggregated_inventory(user_id).map_err(|err| {
+        error!("Error building aggregated inventory: {err}");
+        Status::internal("Internal DB error building aggregated inventory")
       })
     )?;
+    let total_items = aggregated_inventory
+      .item_counts
+      .iter()
+      .map(|count| count.total_count)
+      .sum::<u32>();
 
     Ok(Response::new(GetInventoryResponse {
       items,
-      total_items: total_items.unwrap_or(0) as _,
+      total_items,
+      aggregated_inventory: Some(aggregated_inventory),
     }))
   }
 
@@ -156,7 +162,7 @@ impl MinePrivateService for MinePrivateServer {
     let StartMiningRequest { location_name } = req.into_inner();
 
     let loot_stream = start_mining(user_id, &location_name).await?;
-    Ok(Response::new(Box::pin(loot_stream.map(Ok))))
+    Ok(Response::new(Box::pin(loot_stream)))
   }
 
   async fn stop_mining(
@@ -164,7 +170,7 @@ impl MinePrivateService for MinePrivateServer {
     req: Request<StopMiningRequest>,
   ) -> Result<Response<StopMiningResponse>, Status> {
     let user_id = req.user_id();
-    stop_mining(user_id).await;
+    stop_mining(user_id, StopMiningReason::Manual).await;
     Ok(Response::new(StopMiningResponse {}))
   }
 

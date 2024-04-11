@@ -137,10 +137,27 @@ message GetInventoryRequest {
   SortDirection sort_direction = 4;
 }
 
+message ItemQualityHistogram {
+  repeated uint32 buckets = 3;
+}
+
+message AggregatedItemCount {
+  uint32 item_id = 1;
+  uint32 total_count = 2;
+  float total_quality = 3;
+  float total_value = 4;
+  ItemQualityHistogram quality_histogram = 5;
+}
+
+message AggregatedInventory {
+  repeated AggregatedItemCount item_counts = 1;
+}
+
 message GetInventoryResponse {
   repeated Item items = 1;
   // total items in the full inventory, before any filtering or pagination
   uint32 total_items = 2;
+  AggregatedInventory aggregated_inventory = 3;
 }
 
 message StopMiningRequest {}
@@ -149,9 +166,15 @@ message StopMiningResponse {}
 
 message GetBaseRequest {}
 
+message ItemCost {
+  uint32 item_id = 1;
+  float total_quality = 2;
+}
+
 message StorageUpgrades {
   uint32 storage_level = 1;
   uint32 storage_capacity = 2;
+  repeated ItemCost upgrade_cost = 3;
 }
 
 message Upgrades {

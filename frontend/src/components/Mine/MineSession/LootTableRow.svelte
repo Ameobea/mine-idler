@@ -18,13 +18,13 @@
     background-color: #485760;
   }
   .rarity-tier-1 td {
-    background-color: #3a6b90;
+    background-color: #81a16c;
   }
   .rarity-tier-2 td {
-    background-color: #5d3479;
+    background-color: #0baedf;
   }
   .rarity-tier-3 td {
-    background-color: #9d27a3;
+    background-color: #d127bb;
   }
   .rarity-tier-4 td {
     background-color: #750b1f;

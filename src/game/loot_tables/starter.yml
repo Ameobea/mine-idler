@@ -8,7 +8,7 @@
   - name: polyiso_insulation
     weight: 0.5
   - name: wooden_palette
-    weight: 0.5
+    weight: 1.0
   - name: rusty_iron_chunk
     weight: 0.5
   - name: pet_plastic_fragments
@@ -18,9 +18,9 @@
   - name: corrugated_cardboard
     weight: 1.5
   - name: roof_shingles
-    weight: 0.5
+    weight: 0.75
   - name: wooden_beam
-    weight: 0.5
+    weight: 1.0
 # blues
 - weight: 10.0
   table:
@@ -51,18 +51,18 @@
   - name: neodymium_magnet
     weight: 1.0
   - name: smoke_detector
-    weight: 0.5
+    weight: 0.3
   - name: catalytic_converter
     weight: 1.0
   - name: small_dc_motor
     weight: 1.0
 # reds
-- weight: 0.08
+- weight: 0.06
   table:
   - name: paint_can
     weight: 1.0
 # golds
-- weight: 0.012
+- weight: 0.008
   table:
   - name: plutonium_pacemaker_battery
     weight: 1.0

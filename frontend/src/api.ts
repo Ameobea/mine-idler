@@ -3,6 +3,8 @@ import { createGrpcWebTransport } from '@connectrpc/connect-web';
 import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
 import { MinePrivateService, MinePublicService } from './protos/mine_connect';
+import { clearGlobalState } from './state';
+import { goto } from '$app/navigation';
 
 const BaseURL = PUBLIC_API_BASE_URL ?? 'http://localhost:5900';
 
@@ -16,6 +18,13 @@ const setSessionToken = (token: string) => {
 };
 
 export const getIsLoggedIn = () => !!SessionToken;
+
+export const logout = () => {
+  SessionToken = null;
+  localStorage.removeItem('sessionToken');
+  clearGlobalState();
+  goto('/');
+};
 
 const customFetch: typeof globalThis.fetch = async (...args) => {
   const res = await fetch(...args);

@@ -8,12 +8,14 @@
   import { writable, type Writable } from 'svelte/store';
   import { GlobalState } from '../../../state';
   import { delay } from '../../../util';
+  import { Code, ConnectError } from '@connectrpc/connect';
 
   export let session: MineSession;
 
   let lootStream: AsyncIterable<StartMiningResponse> | null = null;
   let loot: Writable<Item[]> = writable([]);
-  let error: string | null = null;
+  let error: { message: string; transient: boolean } | null = null;
+  let streamEnded = false;
   let imageHidden = localStorage.getItem('imageHidden') === 'true';
 
   const setImageHidden = (value: boolean) => {
@@ -23,10 +25,11 @@
 
   let lastMinedItem: { item: Item; desc: ItemDescriptor } | null = null;
 
-  onMount(async () => {
+  const startMining = async () => {
     while (true) {
       try {
         error = null;
+        streamEnded = false;
 
         let lastError;
 
@@ -53,73 +56,90 @@
 
         break;
       } catch (err) {
-        error = `Failed to start mining: ${err}`;
+        if (err instanceof ConnectError) {
+          if (err.code == Code.ResourceExhausted) {
+            error = { message: err.rawMessage, transient: false };
+            streamEnded = true;
+            break;
+          }
+        }
+        error = { message: `Error while mining: ${err}`, transient: true };
       } finally {
         lootStream = null;
         await delay(1500);
       }
     }
-  });
+  };
+
+  onMount(startMining);
 </script>
 
 <div class="root">
   <h2>Mining at {session.locationDisplayName}</h2>
 
   {#if error}
-    <div class="error">Error occurred while mining; trying to restart...</div>
+    <div class="error">
+      <p>{error.message}</p>
+      {#if error.transient}
+        <p>Trying to restart...</p>
+      {/if}
+    </div>
   {/if}
 
-  {#if lootStream}
-    <div class="session-container">
-      <div style="width:300px;margin-left: auto;margin-right: auto;">
-        <span
-          class="toggle-image"
-          role="button"
-          tabindex="0"
-          on:click|preventDefault={() => setImageHidden(!imageHidden)}
-          on:keydown|preventDefault={(e) => e.key === 'Enter' && setImageHidden(!imageHidden)}
-          style={imageHidden ? 'text-align: center' : undefined}
-        >
-          {#if imageHidden}
-            Show
-          {:else}
-            Hide
-          {/if}
-          image
-        </span>
-        {#if !imageHidden}
-          <div class="last-mined-item-image-container">
-            {#if lastMinedItem}
-              <img
-                style="width: 100%; height: 100%;"
-                src={`${ImageBaseURL}${lastMinedItem.desc.name}.webp`}
-                alt={lastMinedItem.desc.description}
-              />
-            {:else}
-              <div class="mining-in-progress">Mining...</div>
-            {/if}
-          </div>
-          <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
-            {#if lastMinedItem}
-              {lastMinedItem.desc.displayName}
-            {/if}
-          </p>
+  <div class="session-container">
+    <div style="width:300px;margin-left: auto;margin-right: auto;">
+      <span
+        class="toggle-image"
+        role="button"
+        tabindex="0"
+        on:click|preventDefault={() => setImageHidden(!imageHidden)}
+        on:keydown|preventDefault={(e) => e.key === 'Enter' && setImageHidden(!imageHidden)}
+        style={imageHidden ? 'text-align: center' : undefined}
+      >
+        {#if imageHidden}
+          Show
+        {:else}
+          Hide
         {/if}
-      </div>
+        image
+      </span>
+      {#if !imageHidden}
+        <div class="last-mined-item-image-container">
+          {#if lastMinedItem}
+            <img
+              style="width: 100%; height: 100%;"
+              src={`${ImageBaseURL}${lastMinedItem.desc.name}.webp`}
+              alt={lastMinedItem.desc.description}
+            />
+          {:else if lootStream}
+            <div class="mining-in-progress">Mining...</div>
+          {/if}
+        </div>
+        <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
+          {#if lastMinedItem}
+            {lastMinedItem.desc.displayName}
+          {/if}
+        </p>
+      {/if}
+    </div>
 
-      <div class="session-display">
-        <div style="flex: 0.4">
-          <h3>Stats</h3>
-          <SessionStats loot={$loot} />
-        </div>
-        <div style="flex: 0.6">
-          <h3>Loot</h3>
-          <LootTable loot={$loot} />
-        </div>
+    <div class="session-display">
+      <div style="flex: 0.4">
+        <h3>Stats</h3>
+        <SessionStats loot={$loot} />
+      </div>
+      <div style="flex: 0.6">
+        <h3>Loot</h3>
+        <LootTable loot={$loot} />
       </div>
     </div>
-  {:else if !error}
-    <div>Loading...</div>
+  </div>
+
+  {#if streamEnded && !error}
+    <div>
+      <p>Mining has stopped.</p>
+      <button on:click={() => {}}> Restart mining </button>
+    </div>
   {/if}
 </div>
 
@@ -138,6 +158,7 @@
   .error {
     color: red;
     margin-bottom: 10px;
+    text-align: center;
   }
 
   .session-container {

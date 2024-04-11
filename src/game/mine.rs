@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use dashmap::DashMap;
 use foundations::BootstrapResult;
@@ -22,6 +22,7 @@ use super::items::mine_locations;
 #[derive(Clone)]
 struct MiningSession {
   token: Uuid,
+  stop_tx: Arc<mpsc::Sender<StopMiningReason>>,
 }
 
 lazy_static! {
@@ -29,6 +30,11 @@ lazy_static! {
 }
 
 static INVENTORY_ITEM_SAVE_TX: OnceCell<mpsc::Sender<NewInventoryItem>> = OnceCell::new();
+
+pub enum StopMiningReason {
+  Manual,
+  InventoryFull,
+}
 
 fn inventory_item_save_tx() -> &'static mpsc::Sender<NewInventoryItem> {
   INVENTORY_ITEM_SAVE_TX
@@ -45,7 +51,7 @@ fn check_inventory_space(user_ids: Vec<i32>) -> impl std::future::Future<Output 
       let available_inventory_space = get_available_inventory_space(user_id).await.unwrap_or(0);
       if available_inventory_space <= 0 {
         warn!("User {user_id} inventory full; stopping mining session");
-        stop_mining(user_id).await;
+        stop_mining(user_id, StopMiningReason::InventoryFull).await;
       }
     }
   }
@@ -100,9 +106,11 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
 pub async fn start_mining(
   user_id: i32,
   location_name: &str,
-) -> Result<impl Stream<Item = StartMiningResponse>, Status> {
+) -> Result<impl Stream<Item = Result<StartMiningResponse, Status>>, Status> {
+  let (stop_tx, mut stop_rx) = mpsc::channel(1);
   let session = MiningSession {
     token: Uuid::new_v4(),
+    stop_tx: Arc::new(stop_tx),
   };
   ACTIVE_MINING_SESSIONS.insert(user_id, session.clone());
 
@@ -124,14 +132,34 @@ pub async fn start_mining(
       Status::internal("Internal DB error")
     })?;
   if available_inventory_space <= 0 {
-    return Err(Status::resource_exhausted("Inventory full"));
+    return Err(Status::resource_exhausted(
+      "Inventory is full; mining halted.  Upgrade storage capacity or remove items from inventory \
+       before mining more.",
+    ));
   }
 
   info!("User {user_id} started mining at location {location_name}");
 
   tokio::task::spawn(async move {
     loop {
-      tokio::time::sleep(tokio::time::Duration::from_secs(6)).await;
+      tokio::time::sleep(tokio::time::Duration::from_millis(8200)).await;
+
+      if let Ok(stop_reason) = stop_rx.try_recv() {
+        match stop_reason {
+          StopMiningReason::Manual => info!("User {user_id} stopped mining manually"),
+          StopMiningReason::InventoryFull => {
+            warn!("User {user_id} stopped mining due to full inventory");
+            let _ = tx
+              .send(Err(Status::resource_exhausted(
+                "Inventory is full; mining halted.  Upgrade storage capacity or remove items from \
+                 inventory before continuing.",
+              )))
+              .await;
+            break;
+          },
+        }
+        break;
+      }
 
       // Check if this session is still active
       match ACTIVE_MINING_SESSIONS.get(&user_id) {
@@ -159,7 +187,7 @@ pub async fn start_mining(
       }
 
       if tx
-        .send(StartMiningResponse { loot: Some(loot) })
+        .send(Ok(StartMiningResponse { loot: Some(loot) }))
         .await
         .is_err()
       {
@@ -171,4 +199,8 @@ pub async fn start_mining(
   Ok(ReceiverStream::new(rx))
 }
 
-pub async fn stop_mining(user_id: i32) { ACTIVE_MINING_SESSIONS.remove(&user_id); }
+pub async fn stop_mining(user_id: i32, reason: StopMiningReason) {
+  if let Some((_uid, session)) = ACTIVE_MINING_SESSIONS.remove(&user_id) {
+    let _ = session.stop_tx.send(reason);
+  }
+}

@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { AppRoute, CurRoute } from '$lib/AppRoute';
+  import { goto } from '$app/navigation';
 
   export let predicate: (() => void) | undefined = undefined;
 </script>
 
 <button
+  role="link"
   on:click={() => {
     predicate?.();
-    CurRoute.set(AppRoute.Overview);
-  }}>Back</button
+    goto('/app');
+  }}
 >
+  Back
+</button>
 
 <style lang="css">
   button {

@@ -18,6 +18,11 @@ export const AppLoaded = writable(false);
 
 export const GlobalState = writable<GlobalAppState>({} as any);
 
+export const clearGlobalState = () => {
+  AppLoaded.set(false);
+  GlobalState.set({} as any);
+};
+
 let appStateInitStarted = false;
 
 export const getAppStateInitStarted = () => appStateInitStarted;

@@ -24,9 +24,9 @@
   .root {
     display: flex;
     flex-direction: column;
-    height: 240px;
-    width: 200px;
-    border: 1px solid #777;
+    height: 230px;
+    width: 188px;
+    border: 1px solid #242424;
   }
 
   p {
@@ -59,7 +59,7 @@
 
   img {
     margin: 0;
-    height: 200px;
-    width: 200px;
+    height: 188px;
+    width: 188px;
   }
 </style>

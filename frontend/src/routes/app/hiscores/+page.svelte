@@ -1,7 +1,8 @@
 <script lang="ts">
   import { useQuery } from '@sveltestack/svelte-query';
-  import { PublicClient } from '../../api';
-  import BackToOverviewButton from '../BackToOverviewButton.svelte';
+
+  import { PublicClient } from '../../../api';
+  import BackToOverviewButton from '../../../components/BackToOverviewButton.svelte';
 
   const hiscoresRes = useQuery('hiscores', () => PublicClient.getHiscores({}).then((res) => res.hiscores));
 </script>
