@@ -592,6 +592,15 @@ export class StartMiningRequest extends Message<StartMiningRequest> {
    */
   locationName = "";
 
+  /**
+   * A unique token that is used to identify the mining session.  Can be used to stop this
+   * exact mining session without accidentally stopping some other one started in a different
+   * tab or similar.
+   *
+   * @generated from field: optional string mine_session_token_uuid = 2;
+   */
+  mineSessionTokenUuid?: string;
+
   constructor(data?: PartialMessage<StartMiningRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -601,6 +610,7 @@ export class StartMiningRequest extends Message<StartMiningRequest> {
   static readonly typeName = "mine.StartMiningRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "location_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "mine_session_token_uuid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartMiningRequest {
@@ -1160,6 +1170,13 @@ export class GetInventoryResponse extends Message<GetInventoryResponse> {
  * @generated from message mine.StopMiningRequest
  */
 export class StopMiningRequest extends Message<StopMiningRequest> {
+  /**
+   * If empty or not provided, will stop all mining sessions for the user.
+   *
+   * @generated from field: optional string mine_session_token_uuid = 1;
+   */
+  mineSessionTokenUuid?: string;
+
   constructor(data?: PartialMessage<StopMiningRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1168,6 +1185,7 @@ export class StopMiningRequest extends Message<StopMiningRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "mine.StopMiningRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mine_session_token_uuid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StopMiningRequest {

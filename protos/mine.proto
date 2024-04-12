@@ -86,6 +86,10 @@ message GetAccountResponse {
 
 message StartMiningRequest {
   string location_name = 1;
+  // A unique token that is used to identify the mining session.  Can be used to stop this
+  // exact mining session without accidentally stopping some other one started in a different
+  // tab or similar.
+  optional string mine_session_token_uuid = 2;
 }
 
 message ItemModifier {}
@@ -161,7 +165,10 @@ message GetInventoryResponse {
   AggregatedInventory aggregated_inventory = 3;
 }
 
-message StopMiningRequest {}
+message StopMiningRequest {
+  // If empty or not provided, will stop all mining sessions for the user.
+  optional string mine_session_token_uuid = 1;
+}
 
 message StopMiningResponse {}
 

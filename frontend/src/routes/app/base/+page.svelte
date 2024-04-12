@@ -1,10 +1,10 @@
 <script lang="ts">
   import { useQuery } from '@sveltestack/svelte-query';
 
-  import BackToOverviewButton from '../../../components/BackToOverviewButton.svelte';
   import { PrivateClient } from '../../../api';
-  import { UpgradeType } from '../../../protos/mine_pb';
+  import BackToOverviewButton from '../../../components/BackToOverviewButton.svelte';
   import UpgradeModal from '../../../components/Base/UpgradeModal.svelte';
+  import { UpgradeType } from '../../../protos/mine_pb';
 
   let queryRes = useQuery('base', () => PrivateClient.getBase({}));
 

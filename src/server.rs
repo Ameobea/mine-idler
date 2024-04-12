@@ -9,6 +9,7 @@ use tower_http::{
   cors::{AllowMethods, AllowOrigin, CorsLayer},
   trace::TraceLayer,
 };
+use uuid::Uuid;
 
 use crate::{
   auth::verify_password,
@@ -159,9 +160,19 @@ impl MinePrivateService for MinePrivateServer {
     req: Request<StartMiningRequest>,
   ) -> Result<Response<Self::StartMiningStream>, Status> {
     let user_id = req.user_id();
-    let StartMiningRequest { location_name } = req.into_inner();
+    let StartMiningRequest {
+      location_name,
+      mine_session_token_uuid,
+    } = req.into_inner();
+    let mine_session_opt = match mine_session_token_uuid {
+      Some(uuid) => Some(
+        Uuid::parse_str(&uuid)
+          .map_err(|_| Status::invalid_argument("Invalid mine session token UUID"))?,
+      ),
+      None => None,
+    };
 
-    let loot_stream = start_mining(user_id, &location_name).await?;
+    let loot_stream = start_mining(user_id, &location_name, mine_session_opt).await?;
     Ok(Response::new(Box::pin(loot_stream)))
   }
 
@@ -170,7 +181,17 @@ impl MinePrivateService for MinePrivateServer {
     req: Request<StopMiningRequest>,
   ) -> Result<Response<StopMiningResponse>, Status> {
     let user_id = req.user_id();
-    stop_mining(user_id, StopMiningReason::Manual).await;
+    let StopMiningRequest {
+      mine_session_token_uuid,
+    } = req.into_inner();
+    let mine_session_opt = match mine_session_token_uuid {
+      Some(uuid) => Some(
+        Uuid::parse_str(&uuid)
+          .map_err(|_| Status::invalid_argument("Invalid mine session token UUID"))?,
+      ),
+      None => None,
+    };
+    stop_mining(user_id, StopMiningReason::Manual, mine_session_opt).await;
     Ok(Response::new(StopMiningResponse {}))
   }
 

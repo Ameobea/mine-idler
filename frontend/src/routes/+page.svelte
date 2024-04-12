@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { goto, preloadCode } from '$app/navigation';
   import { onMount } from 'svelte';
+
   import { getIsLoggedIn, login, register } from '../api';
   import { initAppState } from '../state';
-  import { browser } from '$app/environment';
 
   let username = '';
   let password = '';

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { RarityColors } from '$lib/item';
+
   import type { Item } from '../../../protos/mine_pb';
   import { GlobalState } from '../../../state';
 

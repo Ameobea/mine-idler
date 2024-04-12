@@ -1,14 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import type { MineSession } from '../types';
+  import { Code, ConnectError } from '@connectrpc/connect';
+  import { onDestroy, onMount } from 'svelte';
+  import { writable, type Writable } from 'svelte/store';
+  import { v4 as uuidv4 } from 'uuid';
+
   import { ImageBaseURL, PrivateClient } from '../../../api';
   import type { Item, ItemDescriptor, StartMiningResponse } from '../../../protos/mine_pb';
-  import SessionStats from './SessionStats.svelte';
-  import LootTable from './LootTable.svelte';
-  import { writable, type Writable } from 'svelte/store';
   import { GlobalState } from '../../../state';
   import { delay } from '../../../util';
-  import { Code, ConnectError } from '@connectrpc/connect';
+  import type { MineSession } from '../types';
+  import LootTable from './LootTable.svelte';
+  import SessionStats from './SessionStats.svelte';
 
   export let session: MineSession;
 
@@ -53,14 +55,15 @@
     localStorage.setItem('imageHidden', value.toString());
   };
 
+  let mineSessionToken: string | null = null;
   let lastMinedItem: { item: Item; desc: ItemDescriptor } | null = null;
 
-  let totalMineTime = 8200;
-  let totalMineTimeSeconds = totalMineTime / 1000;
+  let totalMineTime = Infinity;
+  $: totalMineTimeSeconds = totalMineTime / 1000;
   let currentMillis = Date.now();
   let lastReceivedLootAt = currentMillis;
   $: elapsedTime = clamp(round((currentMillis - lastReceivedLootAt) / 1000, 1), 0, totalMineTimeSeconds);
-  $: progressAmount = clamp(round((currentMillis - lastReceivedLootAt) * 100 / totalMineTime, 1), 0, 100);
+  $: progressAmount = clamp(round(((currentMillis - lastReceivedLootAt) * 100) / totalMineTime, 1), 0, 100);
 
   const startMining = async () => {
     lastReceivedLootAt = Date.now();
@@ -70,15 +73,14 @@
         error = null;
         streamEnded = false;
 
-        let lastError;
-
-        lootStream = PrivateClient.startMining({ locationName: session.locationName });
-
-        if (!lootStream) {
-          throw lastError;
-        }
+        mineSessionToken = uuidv4();
+        lootStream = PrivateClient.startMining({
+          locationName: session.locationName,
+          mineSessionTokenUuid: mineSessionToken,
+        });
 
         for await (const res of lootStream) {
+          totalMineTime = res.millisUntilNextLoot;
           const newLoot = res.loot;
           if (!newLoot) {
             continue;
@@ -100,6 +102,7 @@
           }, 4000);
         }
 
+        streamEnded = true;
         break;
       } catch (err) {
         if (err instanceof ConnectError) {
@@ -118,8 +121,17 @@
   };
 
   onMount(startMining);
+
+  const animationCancelSignal = { aborted: false };
+  onDestroy(() => {
+    animationCancelSignal.aborted = true;
+    if (mineSessionToken) {
+      PrivateClient.stopMining({ mineSessionTokenUuid: mineSessionToken });
+    }
+  });
+
   // update progress bar every .1 sec, which is the precision of the percentage in it
-  animationInterval(100, null, () => {
+  animationInterval(90, animationCancelSignal, () => {
     currentMillis = Date.now();
   });
 </script>
@@ -138,6 +150,16 @@
 
   <div class="session-container">
     <div style="width:300px;margin-left: auto;margin-right: auto;">
+      {#if lootStream}
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-amount" style="width: {progressAmount}%;"></div>
+            <div class="progress-percent-text">{progressAmount}%</div>
+          </div>
+          <div class="progress-text">{elapsedTime}s / {totalMineTimeSeconds}s</div>
+        </div>
+      {/if}
+
       <span
         class="toggle-image"
         role="button"
@@ -153,13 +175,6 @@
         {/if}
         image
       </span>
-      <div class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-amount" style="width: {progressAmount}%;"></div>
-          <div class="progress-percent-text">{progressAmount}%</div>
-        </div>
-        <div class="progress-text">{elapsedTime}s / {totalMineTimeSeconds}s</div>
-      </div>
       {#if !imageHidden}
         <div class="last-mined-item-image-container">
           {#if lastMinedItem}
@@ -169,9 +184,7 @@
               alt={lastMinedItem.desc.description}
             />
           {:else if lootStream}
-            <div class="mining-in-progress">
-              Mining...
-            </div>
+            <div class="mining-in-progress">Mining...</div>
           {/if}
         </div>
         <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
@@ -210,8 +223,9 @@
 
   h2 {
     text-align: center;
-    margin-top: 0;
+    margin-top: -8px;
     margin-bottom: 20px;
+    padding: 0;
   }
 
   .error {
@@ -240,9 +254,9 @@
 
   .toggle-image {
     display: block;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     color: rgb(238, 238, 238);
-    font-size: 13.5px;
+    font-size: 13px;
     text-decoration: underline;
   }
 
@@ -264,11 +278,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-bottom: 8px;
   }
 
   .progress-bar {
     width: 100%;
-    /* background-color: #f0f0f0; */
     border: solid 1px #ddd;
     border-radius: 10px;
     overflow: hidden;
@@ -295,7 +309,6 @@
   }
 
   .progress-text {
-    /* margin-top: 10px; */
     font-size: 18px;
   }
 </style>

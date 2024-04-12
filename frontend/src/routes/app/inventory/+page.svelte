@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { SortBy, SortDirection } from '../../../protos/mine_pb';
+  import { useQuery } from '@sveltestack/svelte-query';
+
   import { PrivateClient } from '../../../api';
   import BackToOverviewButton from '../../../components/BackToOverviewButton.svelte';
-  import { useQuery } from '@sveltestack/svelte-query';
   import TabList from '../../../components/Common/TabList.svelte';
-  import CardsList from '../../../components/Inventory/CardsList.svelte';
   import AggregateView from '../../../components/Inventory/AggregateView.svelte';
+  import CardsList from '../../../components/Inventory/CardsList.svelte';
+  import { SortBy, SortDirection } from '../../../protos/mine_pb';
 
   enum InventoryTab {
     Cards = 'cards',

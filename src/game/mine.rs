@@ -54,7 +54,7 @@ fn check_inventory_space(user_ids: Vec<i32>) -> impl std::future::Future<Output 
       let available_inventory_space = get_available_inventory_space(user_id).await.unwrap_or(0);
       if available_inventory_space <= 0 {
         warn!("User {user_id} inventory full; stopping mining session");
-        stop_mining(user_id, StopMiningReason::InventoryFull).await;
+        stop_mining(user_id, StopMiningReason::InventoryFull, None).await;
       }
     }
   }
@@ -109,10 +109,11 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
 pub async fn start_mining(
   user_id: i32,
   location_name: &str,
+  session_token: Option<Uuid>,
 ) -> Result<impl Stream<Item = Result<StartMiningResponse, Status>>, Status> {
   let (stop_tx, mut stop_rx) = mpsc::channel(1);
   let session = MiningSession {
-    token: Uuid::new_v4(),
+    token: session_token.unwrap_or_else(Uuid::new_v4),
     stop_tx: Arc::new(stop_tx),
   };
   ACTIVE_MINING_SESSIONS.insert(user_id, session.clone());
@@ -218,8 +219,13 @@ pub async fn start_mining(
   Ok(ReceiverStream::new(rx))
 }
 
-pub async fn stop_mining(user_id: i32, reason: StopMiningReason) {
-  if let Some((_uid, session)) = ACTIVE_MINING_SESSIONS.remove(&user_id) {
+pub async fn stop_mining(user_id: i32, reason: StopMiningReason, session_token: Option<Uuid>) {
+  let removed = ACTIVE_MINING_SESSIONS.remove_if(&user_id, |_, session| match session_token {
+    Some(token) => session.token == token,
+    None => true,
+  });
+
+  if let Some((_uid, session)) = removed {
     let _ = session.stop_tx.send(reason);
   }
 }

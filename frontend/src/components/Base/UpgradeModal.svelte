@@ -1,9 +1,10 @@
 <script lang="ts">
   import { proto3 } from '@bufbuild/protobuf';
-  import { ItemCost, UpgradeType, type Upgrades } from '../../protos/mine_pb';
+
+  import { PrivateClient } from '../../api';
+  import { UpgradeType, type Upgrades } from '../../protos/mine_pb';
   import Modal from '../Common/Modal.svelte';
   import UpgradeCost from './UpgradeCost.svelte';
-  import { PrivateClient } from '../../api';
 
   export let open: boolean;
   export let upgrades: Upgrades;
