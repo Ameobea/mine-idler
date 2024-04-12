@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::Instant};
+use std::{
+  sync::Arc,
+  time::{Duration, Instant},
+};
 
 use dashmap::DashMap;
 use foundations::BootstrapResult;
@@ -141,9 +144,21 @@ pub async fn start_mining(
   info!("User {user_id} started mining at location {location_name}");
 
   tokio::task::spawn(async move {
-    loop {
-      tokio::time::sleep(tokio::time::Duration::from_millis(8200)).await;
+    let millis_until_next_loot = 8200u32;
+    tokio::time::sleep(Duration::from_millis(millis_until_next_loot as _)).await;
 
+    if tx
+      .send(Ok(StartMiningResponse {
+        loot: None,
+        millis_until_next_loot,
+      }))
+      .await
+      .is_err()
+    {
+      return;
+    }
+
+    loop {
       if let Ok(stop_reason) = stop_rx.try_recv() {
         match stop_reason {
           StopMiningReason::Manual => info!("User {user_id} stopped mining manually"),
@@ -187,7 +202,10 @@ pub async fn start_mining(
       }
 
       if tx
-        .send(Ok(StartMiningResponse { loot: Some(loot) }))
+        .send(Ok(StartMiningResponse {
+          loot: Some(loot),
+          millis_until_next_loot,
+        }))
         .await
         .is_err()
       {

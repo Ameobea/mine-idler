@@ -99,6 +99,7 @@ message Item {
 
 message StartMiningResponse {
   Item loot = 1;
+  uint32 millis_until_next_loot = 2;
 }
 
 message GetMineLocationsRequest {}

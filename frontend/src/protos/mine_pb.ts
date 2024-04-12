@@ -715,6 +715,11 @@ export class StartMiningResponse extends Message<StartMiningResponse> {
    */
   loot?: Item;
 
+  /**
+   * @generated from field: uint32 millis_until_next_loot = 2;
+   */
+  millisUntilNextLoot = 0;
+
   constructor(data?: PartialMessage<StartMiningResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -724,6 +729,7 @@ export class StartMiningResponse extends Message<StartMiningResponse> {
   static readonly typeName = "mine.StartMiningResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "loot", kind: "message", T: Item },
+    { no: 2, name: "millis_until_next_loot", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartMiningResponse {
