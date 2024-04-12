@@ -145,7 +145,6 @@ pub async fn start_mining(
 
   tokio::task::spawn(async move {
     let millis_until_next_loot = 8200u32;
-    tokio::time::sleep(Duration::from_millis(millis_until_next_loot as _)).await;
 
     if tx
       .send(Ok(StartMiningResponse {
@@ -159,6 +158,8 @@ pub async fn start_mining(
     }
 
     loop {
+      tokio::time::sleep(Duration::from_millis(millis_until_next_loot as _)).await;
+
       if let Ok(stop_reason) = stop_rx.try_recv() {
         match stop_reason {
           StopMiningReason::Manual => info!("User {user_id} stopped mining manually"),

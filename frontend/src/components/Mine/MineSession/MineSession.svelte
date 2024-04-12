@@ -40,15 +40,20 @@
         }
 
         for await (const res of lootStream) {
+          const newLoot = res.loot;
+          if (!newLoot) {
+            continue;
+          }
+
           loot.update((prev) => {
-            prev.push(res.loot!);
+            prev.push(newLoot);
             return prev;
           });
 
-          const desc = $GlobalState.itemsById.get(res.loot!.id)!;
-          lastMinedItem = { item: res.loot!, desc };
+          const desc = $GlobalState.itemsById.get(newLoot.id)!;
+          lastMinedItem = { item: newLoot, desc };
           setTimeout(() => {
-            if (lastMinedItem?.item === res.loot) {
+            if (lastMinedItem?.item === newLoot) {
               lastMinedItem = null;
             }
           }, 4000);
