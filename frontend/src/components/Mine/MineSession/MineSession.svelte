@@ -12,6 +12,36 @@
 
   export let session: MineSession;
 
+  // ripping from stackoverflow. umad?
+  function animationInterval(ms: number, signal: { aborted: boolean } | null, callback: (time: number) => void) {
+    const start = Date.now();
+
+    function frame(time: number) {
+      if (signal?.aborted) return;
+      callback(time);
+      scheduleFrame(time);
+    }
+
+    function scheduleFrame(time: number) {
+      const elapsed = time - start;
+      const roundedElapsed = Math.round(elapsed / ms) * ms;
+      const targetNext = start + roundedElapsed + ms;
+      const delay = targetNext - performance.now();
+      setTimeout(() => requestAnimationFrame(frame), delay);
+    }
+
+    scheduleFrame(start);
+  }
+
+  function round(num: number, precision: number) {
+    const factor = Math.pow(10, precision);
+    return Math.round(num * factor) / factor;
+  }
+
+  function clamp(num: number, min: number, max: number) {
+    return Math.min(Math.max(num, min), max);
+  }
+
   let lootStream: AsyncIterable<StartMiningResponse> | null = null;
   let loot: Writable<Item[]> = writable([]);
   let error: { message: string; transient: boolean } | null = null;
@@ -25,7 +55,16 @@
 
   let lastMinedItem: { item: Item; desc: ItemDescriptor } | null = null;
 
+  let totalMineTime = 8200;
+  let totalMineTimeSeconds = totalMineTime / 1000;
+  let currentMillis = Date.now();
+  let lastReceivedLootAt = currentMillis;
+  $: elapsedTime = clamp(round((currentMillis - lastReceivedLootAt) / 1000, 1), 0, totalMineTimeSeconds);
+  $: progressAmount = clamp(round((currentMillis - lastReceivedLootAt) * 100 / totalMineTime, 1), 0, 100);
+
   const startMining = async () => {
+    lastReceivedLootAt = Date.now();
+
     while (true) {
       try {
         error = null;
@@ -44,6 +83,8 @@
           if (!newLoot) {
             continue;
           }
+
+          lastReceivedLootAt = Date.now() - (res.millisUntilNextLoot - totalMineTime);
 
           loot.update((prev) => {
             prev.push(newLoot);
@@ -77,6 +118,10 @@
   };
 
   onMount(startMining);
+  // update progress bar every .1 sec, which is the precision of the percentage in it
+  animationInterval(100, null, () => {
+    currentMillis = Date.now();
+  });
 </script>
 
 <div class="root">
@@ -108,6 +153,13 @@
         {/if}
         image
       </span>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-amount" style="width: {progressAmount}%;"></div>
+          <div class="progress-percent-text">{progressAmount}%</div>
+        </div>
+        <div class="progress-text">{elapsedTime}s / {totalMineTimeSeconds}s</div>
+      </div>
       {#if !imageHidden}
         <div class="last-mined-item-image-container">
           {#if lastMinedItem}
@@ -117,7 +169,9 @@
               alt={lastMinedItem.desc.description}
             />
           {:else if lootStream}
-            <div class="mining-in-progress">Mining...</div>
+            <div class="mining-in-progress">
+              Mining...
+            </div>
           {/if}
         </div>
         <p style="font-weight: bold; text-align: center; display: block; height: 15px;">
@@ -204,5 +258,44 @@
     height: 100%;
     font-size: 24px;
     font-weight: bold;
+  }
+
+  .progress-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .progress-bar {
+    width: 100%;
+    /* background-color: #f0f0f0; */
+    border: solid 1px #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-amount {
+    height: 20px;
+    background-color: #007bff;
+    transition: width 0.1s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .progress-percent-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 0;
+    bottom: 0;
+  }
+
+  .progress-text {
+    /* margin-top: 10px; */
+    font-size: 18px;
   }
 </style>
