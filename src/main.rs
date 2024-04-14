@@ -20,6 +20,7 @@ mod auth;
 mod conf;
 mod db;
 mod game;
+mod metrics;
 mod protos;
 mod server;
 
@@ -45,6 +46,11 @@ async fn start() -> BootstrapResult<()> {
     tokio::task::spawn(tele_serv_fut);
   }
 
+  let handle = tokio::runtime::Handle::current();
+  foundations::telemetry::tokio_runtime_metrics::register_runtime(None, None, &handle);
+  drop(handle);
+  info!("Registered tokio runtime metrics");
+
   init_db(&cli.settings).await?;
   init_loot_tables()?;
   start_inventory_item_saver().await?;
@@ -60,10 +66,6 @@ fn main() -> BootstrapResult<()> {
   let rt = tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()?;
-
-  let handle = rt.handle();
-  foundations::telemetry::tokio_runtime_metrics::register_runtime(None, None, handle);
-  info!("Registered tokio runtime metrics");
 
   rt.spawn(async move {
     loop {

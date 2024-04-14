@@ -26,6 +26,7 @@ use super::items::mine_locations;
 struct MiningSession {
   token: Uuid,
   stop_tx: Arc<mpsc::Sender<StopMiningReason>>,
+  location_name: &'static str,
 }
 
 lazy_static! {
@@ -54,7 +55,7 @@ fn check_inventory_space(user_ids: Vec<i32>) -> impl std::future::Future<Output 
       let available_inventory_space = get_available_inventory_space(user_id).await.unwrap_or(0);
       if available_inventory_space <= 0 {
         warn!("User {user_id} inventory full; stopping mining session");
-        stop_mining(user_id, StopMiningReason::InventoryFull, None).await;
+        stop_mining(user_id, StopMiningReason::InventoryFull, None);
       }
     }
   }
@@ -106,28 +107,41 @@ pub async fn start_inventory_item_saver() -> BootstrapResult<()> {
   Ok(())
 }
 
+struct MineSessionDropHandle {
+  user_id: i32,
+  session_token: Uuid,
+}
+
+impl Drop for MineSessionDropHandle {
+  fn drop(&mut self) {
+    stop_mining(
+      self.user_id,
+      StopMiningReason::Manual,
+      Some(self.session_token),
+    );
+  }
+}
+
 pub async fn start_mining(
   user_id: i32,
   location_name: &str,
   session_token: Option<Uuid>,
 ) -> Result<impl Stream<Item = Result<StartMiningResponse, Status>>, Status> {
-  let (stop_tx, mut stop_rx) = mpsc::channel(1);
-  let session = MiningSession {
-    token: session_token.unwrap_or_else(Uuid::new_v4),
-    stop_tx: Arc::new(stop_tx),
+  let session_token = session_token.unwrap_or_else(Uuid::new_v4);
+  let drop_handle = MineSessionDropHandle {
+    user_id,
+    session_token,
   };
-  ACTIVE_MINING_SESSIONS.insert(user_id, session.clone());
 
-  let loot_table = match mine_locations()
+  let location = match mine_locations()
     .iter()
     .find(|loc| loc.descriptor.name == location_name)
   {
-    Some(loc) => &loc.loot_table,
+    Some(loc) => loc,
     None => return Err(Status::invalid_argument("Invalid mine location")),
   };
-
-  let (tx, rx) = mpsc::channel(10);
-  let mut rng = pcg_rand::Pcg64::from_rng(OsRng).unwrap();
+  let loot_table = &location.loot_table;
+  let location_name: &'static str = &location.descriptor.name;
 
   let available_inventory_space = get_available_inventory_space(user_id)
     .await
@@ -141,6 +155,19 @@ pub async fn start_mining(
        before mining more.",
     ));
   }
+
+  let (stop_tx, mut stop_rx) = mpsc::channel(1);
+  let session = MiningSession {
+    token: session_token,
+    stop_tx: Arc::new(stop_tx),
+    location_name,
+  };
+  ACTIVE_MINING_SESSIONS.insert(user_id, session.clone());
+
+  crate::metrics::game::active_mine_sessions(location_name).inc();
+
+  let (tx, rx) = mpsc::channel(10);
+  let mut rng = pcg_rand::Pcg64::from_rng(OsRng).unwrap();
 
   info!("User {user_id} started mining at location {location_name}");
 
@@ -214,12 +241,14 @@ pub async fn start_mining(
         break;
       }
     }
+
+    drop(drop_handle);
   });
 
   Ok(ReceiverStream::new(rx))
 }
 
-pub async fn stop_mining(user_id: i32, reason: StopMiningReason, session_token: Option<Uuid>) {
+pub fn stop_mining(user_id: i32, reason: StopMiningReason, session_token: Option<Uuid>) {
   let removed = ACTIVE_MINING_SESSIONS.remove_if(&user_id, |_, session| match session_token {
     Some(token) => session.token == token,
     None => true,
@@ -227,5 +256,6 @@ pub async fn stop_mining(user_id: i32, reason: StopMiningReason, session_token: 
 
   if let Some((_uid, session)) = removed {
     let _ = session.stop_tx.send(reason);
+    crate::metrics::game::active_mine_sessions(session.location_name).dec();
   }
 }

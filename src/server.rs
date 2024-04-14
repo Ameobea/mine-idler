@@ -191,7 +191,7 @@ impl MinePrivateService for MinePrivateServer {
       ),
       None => None,
     };
-    stop_mining(user_id, StopMiningReason::Manual, mine_session_opt).await;
+    stop_mining(user_id, StopMiningReason::Manual, mine_session_opt);
     Ok(Response::new(StopMiningResponse {}))
   }
 
