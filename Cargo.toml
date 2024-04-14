@@ -12,7 +12,6 @@ foundations = { version = "3.3", default-features = false, features = [
   "settings",
   "metrics",
   "telemetry-server",
-  "jemalloc",
   "tokio-runtime-metrics",
   "cli",
 ] }
@@ -42,6 +41,18 @@ dashmap = "5.5"
 lazy_static = "1.4"
 fxhash = "0.2"
 uuid = { version = "1.8", features = ["v4"] }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies.foundations]
+version = "3.3"
+default-features = false
+features = [
+  "settings",
+  "metrics",
+  "telemetry-server",
+  "jemalloc",
+  "tokio-runtime-metrics",
+  "cli",
+]
 
 [build-dependencies]
 tonic-build = { version = "0.11", features = ["prost"] }

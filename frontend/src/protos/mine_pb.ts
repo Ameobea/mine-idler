@@ -666,9 +666,9 @@ export class ItemModifier extends Message<ItemModifier> {
  */
 export class Item extends Message<Item> {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: int32 item_type_id = 1;
    */
-  id = 0;
+  itemTypeId = 0;
 
   /**
    * @generated from field: float quality = 2;
@@ -685,6 +685,11 @@ export class Item extends Message<Item> {
    */
   value = 0;
 
+  /**
+   * @generated from field: optional string item_uuid = 5;
+   */
+  itemUuid?: string;
+
   constructor(data?: PartialMessage<Item>) {
     super();
     proto3.util.initPartial(data, this);
@@ -693,10 +698,11 @@ export class Item extends Message<Item> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "mine.Item";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 1, name: "item_type_id", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "quality", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
     { no: 3, name: "modifiers", kind: "message", T: ItemModifier, repeated: true },
     { no: 4, name: "value", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 5, name: "item_uuid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Item {

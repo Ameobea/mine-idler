@@ -244,6 +244,7 @@ pub(crate) async fn get_user_inventory(
     SortDirection::Descending => "DESC",
   };
 
+  let timer = crate::metrics::db::get_user_inventory_duration().start_timer();
   let items: Vec<DbItem> = sqlx::query_as(&format!(
     "SELECT inv.id, inv.item_id, inv.quality, inv.value, inv.modifiers FROM inventory inv JOIN \
      items i ON inv.item_id = i.id WHERE inv.user_id = $1 ORDER BY {sort_column} {sort_direction} \
@@ -258,6 +259,7 @@ pub(crate) async fn get_user_inventory(
     error!("Error reading user inventory from database: {err}");
     Status::internal("Internal DB error fetching inventory")
   })?;
+  timer.stop_and_record();
 
   Ok(
     items
@@ -274,10 +276,11 @@ pub(crate) async fn get_user_inventory(
           })?;
 
         Ok(Item {
-          id: item.item_id,
+          item_type_id: item.item_id,
           quality: item.quality,
           value: item.value,
           modifiers,
+          item_uuid: Some(item.id.to_string()),
         })
       })
       .collect::<Result<_, _>>()?,
@@ -289,6 +292,7 @@ pub async fn get_user_aggregated_inventory(user_id: i32) -> sqlx::Result<Aggrega
   // for the quality distribution of each item.
   //
   // Quality is hard-capped from [0,1], and we used 32 fixed buckets for now.
+  let timer = crate::metrics::db::get_user_aggregated_inventory_duration().start_timer();
   let rows = sqlx::query!(
     "SELECT item_id, COUNT(*) as total_count, SUM(quality) as total_quality, SUM(value) as \
      total_value, width_bucket(quality, 0, 1, 32) AS quality_bucket_ix FROM inventory WHERE \
@@ -297,6 +301,7 @@ pub async fn get_user_aggregated_inventory(user_id: i32) -> sqlx::Result<Aggrega
   )
   .fetch_all(pool())
   .await?;
+  timer.stop_and_record();
 
   struct QualityBucket {
     bucket_ix: u32,
@@ -359,12 +364,14 @@ pub async fn get_user_aggregated_inventory(user_id: i32) -> sqlx::Result<Aggrega
 }
 
 pub async fn get_hiscores() -> sqlx::Result<Vec<HiscoreEntry>> {
+  let timer = crate::metrics::db::get_hiscores_duration().start_timer();
   let rows = sqlx::query!(
     "SELECT u.username, SUM(inv.value) AS total_value FROM inventory inv INNER JOIN users u ON \
      inv.user_id = u.id GROUP BY u.username ORDER BY total_value DESC LIMIT 100"
   )
   .fetch_all(pool())
   .await?;
+  timer.stop_and_record();
 
   Ok(
     rows
@@ -378,9 +385,11 @@ pub async fn get_hiscores() -> sqlx::Result<Vec<HiscoreEntry>> {
 }
 
 pub async fn get_user_inventory_count(user_id: i32) -> sqlx::Result<Option<i64>> {
+  let timer = crate::metrics::db::get_user_inventory_count_duration().start_timer();
   let count = sqlx::query_scalar!("SELECT COUNT(*) FROM inventory WHERE user_id = $1", user_id)
     .fetch_one(pool())
     .await?;
+  timer.stop_and_record();
   Ok(count)
 }
 

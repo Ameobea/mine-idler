@@ -219,7 +219,7 @@ pub async fn start_mining(
       let res = inventory_item_save_tx()
         .send(NewInventoryItem {
           user_id,
-          item_id: loot.id,
+          item_id: loot.item_type_id,
           quality: loot.quality,
           value: loot.value,
           modifiers: None, // TODO

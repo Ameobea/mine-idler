@@ -187,10 +187,11 @@ impl LootTableItemEntry {
     let value = compute_item_value(self.id, quality, &modifiers);
 
     Item {
-      id: self.id as i32,
+      item_type_id: self.id as i32,
       modifiers,
       quality,
       value,
+      item_uuid: None,
     }
   }
 
