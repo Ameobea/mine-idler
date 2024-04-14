@@ -6,7 +6,7 @@
 
   export let item: Item;
 
-  $: desc = $GlobalState.itemsById.get(item.id)!;
+  $: desc = $GlobalState.itemsById.get(item.itemTypeId)!;
 </script>
 
 <div class="root">

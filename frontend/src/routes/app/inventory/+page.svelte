@@ -18,7 +18,7 @@
   let sortBy = SortBy.Value;
   let sortDirection = SortDirection.Descending;
 
-  let queryRes = useQuery(['inventory'], () =>
+  let queryRes = useQuery(['inventory', sortBy, sortDirection], () =>
     PrivateClient.getInventory({ pageNumber: 0, pageSize: 2000, sortBy, sortDirection })
   );
 

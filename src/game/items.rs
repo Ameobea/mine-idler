@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
   db::insert_item_descriptors,
-  protos::{Item, ItemDescriptor, ItemModifier, MineLocationDescriptor},
+  protos::{Item, ItemDescriptor, ItemModifier, LocationDescriptor},
 };
 
 static ITEM_DESCRIPTORS: OnceCell<Vec<ItemDescriptor>> = OnceCell::new();
@@ -196,7 +196,9 @@ impl LootTableItemEntry {
     }
   }
 
-  fn gen_modifiers(&self, _rng: &mut impl RngCore) -> Vec<ItemModifier> { Vec::new() }
+  fn gen_modifiers(&self, _rng: &mut impl RngCore) -> Vec<ItemModifier> {
+    Vec::new()
+  }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -232,7 +234,7 @@ impl LootTable {
 }
 
 pub struct MineLocation {
-  pub descriptor: MineLocationDescriptor,
+  pub descriptor: LocationDescriptor,
   pub loot_table: LootTable,
 }
 
@@ -245,7 +247,7 @@ pub fn mine_locations() -> &'static Vec<MineLocation> {
 }
 
 pub fn init_loot_tables() -> BootstrapResult<()> {
-  let location_descriptors: Vec<MineLocationDescriptor> =
+  let location_descriptors: Vec<LocationDescriptor> =
     serde_yaml::from_str(include_str!("mine_locations.yml"))?;
 
   let loot_tables = [

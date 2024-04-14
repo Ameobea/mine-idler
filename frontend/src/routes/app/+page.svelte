@@ -5,6 +5,7 @@
 <div class="root">
   <div class="nav">
     <a data-sveltekit-preload-code="hover" href="/app/mine" role="button">Mine</a>
+    <a data-sveltekit-preload-code="hover" href="/app/gamble" role="button">Gamble</a>
     <a data-sveltekit-preload-code="hover" href="/app/inventory" role="button">Inventory</a>
     <a data-sveltekit-preload-code="hover" href="/app/hiscores" role="button">Hiscores</a>
     <a data-sveltekit-preload-code="hover" href="/app/base" role="button">Base</a>

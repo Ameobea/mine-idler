@@ -93,7 +93,7 @@
             return prev;
           });
 
-          const desc = $GlobalState.itemsById.get(newLoot.id)!;
+          const desc = $GlobalState.itemsById.get(newLoot.itemTypeId)!;
           lastMinedItem = { item: newLoot, desc };
           setTimeout(() => {
             if (lastMinedItem?.item === newLoot) {

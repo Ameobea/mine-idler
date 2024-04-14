@@ -797,9 +797,9 @@ export class GetMineLocationsRequest extends Message<GetMineLocationsRequest> {
 }
 
 /**
- * @generated from message mine.MineLocationDescriptor
+ * @generated from message mine.LocationDescriptor
  */
-export class MineLocationDescriptor extends Message<MineLocationDescriptor> {
+export class LocationDescriptor extends Message<LocationDescriptor> {
   /**
    * @generated from field: int32 id = 1;
    */
@@ -820,13 +820,13 @@ export class MineLocationDescriptor extends Message<MineLocationDescriptor> {
    */
   description = "";
 
-  constructor(data?: PartialMessage<MineLocationDescriptor>) {
+  constructor(data?: PartialMessage<LocationDescriptor>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "mine.MineLocationDescriptor";
+  static readonly typeName = "mine.LocationDescriptor";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -834,20 +834,20 @@ export class MineLocationDescriptor extends Message<MineLocationDescriptor> {
     { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MineLocationDescriptor {
-    return new MineLocationDescriptor().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LocationDescriptor {
+    return new LocationDescriptor().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MineLocationDescriptor {
-    return new MineLocationDescriptor().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LocationDescriptor {
+    return new LocationDescriptor().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MineLocationDescriptor {
-    return new MineLocationDescriptor().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LocationDescriptor {
+    return new LocationDescriptor().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MineLocationDescriptor | PlainMessage<MineLocationDescriptor> | undefined, b: MineLocationDescriptor | PlainMessage<MineLocationDescriptor> | undefined): boolean {
-    return proto3.util.equals(MineLocationDescriptor, a, b);
+  static equals(a: LocationDescriptor | PlainMessage<LocationDescriptor> | undefined, b: LocationDescriptor | PlainMessage<LocationDescriptor> | undefined): boolean {
+    return proto3.util.equals(LocationDescriptor, a, b);
   }
 }
 
@@ -856,9 +856,9 @@ export class MineLocationDescriptor extends Message<MineLocationDescriptor> {
  */
 export class MineLocationRes extends Message<MineLocationRes> {
   /**
-   * @generated from field: mine.MineLocationDescriptor descriptor = 1;
+   * @generated from field: mine.LocationDescriptor descriptor = 1;
    */
-  descriptor?: MineLocationDescriptor;
+  descriptor?: LocationDescriptor;
 
   /**
    * @generated from field: bool is_available = 2;
@@ -873,7 +873,7 @@ export class MineLocationRes extends Message<MineLocationRes> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "mine.MineLocationRes";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "descriptor", kind: "message", T: MineLocationDescriptor },
+    { no: 1, name: "descriptor", kind: "message", T: LocationDescriptor },
     { no: 2, name: "is_available", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 

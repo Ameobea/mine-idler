@@ -109,7 +109,7 @@ message StartMiningResponse {
 
 message GetMineLocationsRequest {}
 
-message MineLocationDescriptor {
+message LocationDescriptor {
   int32 id = 1;
   string name = 2;
   string display_name = 4;
@@ -117,7 +117,7 @@ message MineLocationDescriptor {
 }
 
 message MineLocationRes {
-  MineLocationDescriptor descriptor = 1;
+  LocationDescriptor descriptor = 1;
   bool is_available = 2;
 }
 
