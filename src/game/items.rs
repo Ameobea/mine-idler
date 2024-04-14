@@ -7,6 +7,7 @@ use rand::{seq::SliceRandom, Rng};
 use rand_distr::Distribution;
 use scrypt::password_hash::rand_core::RngCore;
 use serde::{Deserialize, Deserializer, Serialize};
+use uuid::Uuid;
 
 use crate::{
   db::insert_item_descriptors,
@@ -191,7 +192,7 @@ impl LootTableItemEntry {
       modifiers,
       quality,
       value,
-      item_uuid: None,
+      item_uuid: Uuid::new_v4().to_string(),
     }
   }
 

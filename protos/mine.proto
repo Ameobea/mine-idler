@@ -99,7 +99,7 @@ message Item {
   float quality = 2;
   repeated ItemModifier modifiers = 3;
   float value = 4;
-  optional string item_uuid = 5;
+  string item_uuid = 5;
 }
 
 message StartMiningResponse {

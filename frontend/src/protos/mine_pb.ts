@@ -686,9 +686,9 @@ export class Item extends Message<Item> {
   value = 0;
 
   /**
-   * @generated from field: optional string item_uuid = 5;
+   * @generated from field: string item_uuid = 5;
    */
-  itemUuid?: string;
+  itemUuid = "";
 
   constructor(data?: PartialMessage<Item>) {
     super();
@@ -702,7 +702,7 @@ export class Item extends Message<Item> {
     { no: 2, name: "quality", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
     { no: 3, name: "modifiers", kind: "message", T: ItemModifier, repeated: true },
     { no: 4, name: "value", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 5, name: "item_uuid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "item_uuid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Item {

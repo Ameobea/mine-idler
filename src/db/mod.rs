@@ -188,6 +188,7 @@ pub struct NewInventoryItem {
 }
 
 pub async fn insert_inventory_items(items: &[NewInventoryItem]) -> sqlx::Result<PgQueryResult> {
+  let ids: Vec<Uuid> = items.iter().map(|_| Uuid::new_v4()).collect();
   let user_ids: Vec<i32> = items.iter().map(|item| item.user_id).collect();
   let item_ids: Vec<i32> = items.iter().map(|item| item.item_id).collect();
   let qualities: Vec<f32> = items.iter().map(|item| item.quality).collect();
@@ -196,13 +197,14 @@ pub async fn insert_inventory_items(items: &[NewInventoryItem]) -> sqlx::Result<
     items.iter().map(|item| item.modifiers.clone()).collect();
 
   sqlx::query!(
-    "INSERT INTO inventory (user_id, item_id, quality, value, modifiers) SELECT * FROM \
-     UNNEST($1::int4[], $2::int4[], $3::float4[], $4::float4[], $5::jsonb[])",
+    "INSERT INTO inventory (id, user_id, item_id, quality, value, modifiers) SELECT * FROM \
+     UNNEST($6::uuid[], $1::int4[], $2::int4[], $3::float4[], $4::float4[], $5::jsonb[])",
     &user_ids,
     &item_ids,
     &qualities,
     &values,
-    &modifiers as &[Option<serde_json::Value>]
+    &modifiers as &[Option<serde_json::Value>],
+    &ids,
   )
   .execute(pool())
   .await
@@ -280,7 +282,7 @@ pub(crate) async fn get_user_inventory(
           quality: item.quality,
           value: item.value,
           modifiers,
-          item_uuid: Some(item.id.to_string()),
+          item_uuid: item.id.to_string(),
         })
       })
       .collect::<Result<_, _>>()?,
