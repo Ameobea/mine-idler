@@ -11,7 +11,7 @@
   $: totalValue = loot.reduce((acc, item) => acc + item.value, 0);
   $: countsByRarityTier = loot.reduce(
     (acc, item) => {
-      const desc = $GlobalState.itemsById.get(item.id)!;
+      const desc = $GlobalState.itemsById.get(item.itemTypeId)!;
       acc[desc.rarityTier] = (acc[desc.rarityTier] || 0) + 1;
       return acc;
     },

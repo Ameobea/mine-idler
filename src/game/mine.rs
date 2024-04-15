@@ -162,7 +162,9 @@ pub async fn start_mining(
     stop_tx: Arc::new(stop_tx),
     location_name,
   };
-  ACTIVE_MINING_SESSIONS.insert(user_id, session.clone());
+  if let Some(removed) = ACTIVE_MINING_SESSIONS.insert(user_id, session.clone()) {
+    crate::metrics::game::active_mine_sessions(removed.location_name).dec();
+  }
 
   crate::metrics::game::active_mine_sessions(location_name).inc();
 
