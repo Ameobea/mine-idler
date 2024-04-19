@@ -1,0 +1,26 @@
+- id: 0
+  name: starter
+  display_name: Jeff's Basement
+  description: Not the cosyiest of places but at least jeff is too dumb to rig the odds
+- id: 1
+  name: starter
+  display_name: Gambling Boat
+  description: >
+    The innovation of being able to gamble and get sea sick at the same time. Only riches await.
+- id: 2
+  name: starter
+  display_name: Horse Race
+  description: >
+    Horses, Gunshots and low-lives. It almost feels like home.
+- id: 3
+  name: starter
+  display_name: Casino
+  description: >
+    I swear I saw a magnet pull it there! However, Jeff got his house from this place so it cant be that rigged.
+- id: 4
+  name: starter
+  display_name: Black Market
+  description: >
+    Not sure how I got invited here but the odds are deffinitly higher! I have to give up rounds to not die...
+
+    but I can double my production if I buy another me or was it the heart on the table!
