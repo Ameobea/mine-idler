@@ -16,18 +16,18 @@ use crate::{
   conf::Settings,
   db::{insert_session_token, validate_session_token},
   game::{
-    items::mine_locations,
+    items::{gamble_locations, mine_locations},
     mine::{start_mining, stop_mining, StopMiningReason},
   },
   protos::{
     mine_private_service_server::{MinePrivateService, MinePrivateServiceServer},
     mine_public_service_server::{MinePublicService, MinePublicServiceServer},
-    GetAccountRequest, GetAccountResponse, GetBaseRequest, GetBaseResponse, GetHiscoresRequest,
-    GetHiscoresResponse, GetInventoryRequest, GetInventoryResponse, GetItemDescriptorsRequest,
-    GetMineLocationsRequest, GetMineLocationsResponse, LoginRequest, LoginResponse,
-    MineLocationRes, RegisterRequest, RegisterResponse, SortBy, SortDirection, StartMiningRequest,
-    StartMiningResponse, StopMiningRequest, StopMiningResponse, UpgradeBaseRequest,
-    UpgradeBaseResponse,
+    GambleLocationRes, GetAccountRequest, GetAccountResponse, GetBaseRequest, GetBaseResponse,
+    GetGambleLocationsRequest, GetGambleLocationsResponse, GetHiscoresRequest, GetHiscoresResponse,
+    GetInventoryRequest, GetInventoryResponse, GetItemDescriptorsRequest, GetMineLocationsRequest,
+    GetMineLocationsResponse, LoginRequest, LoginResponse, MineLocationRes, RegisterRequest,
+    RegisterResponse, SortBy, SortDirection, StartMiningRequest, StartMiningResponse,
+    StopMiningRequest, StopMiningResponse, UpgradeBaseRequest, UpgradeBaseResponse,
   },
 };
 
@@ -46,7 +46,9 @@ trait AuthenticatedRequestExt {
 }
 
 impl<T> AuthenticatedRequestExt for Request<T> {
-  fn user_id(&self) -> i32 { self.extensions().get::<UserCredentials>().unwrap().user_id }
+  fn user_id(&self) -> i32 {
+    self.extensions().get::<UserCredentials>().unwrap().user_id
+  }
 }
 
 #[tonic::async_trait]
@@ -64,7 +66,20 @@ impl MinePrivateService for MinePrivateServer {
       item_descriptors,
     }))
   }
-
+  async fn get_gamble_locations(
+    &self,
+    _req: Request<GetGambleLocationsRequest>,
+  ) -> Result<Response<GetGambleLocationsResponse>, Status> {
+    Ok(Response::new(GetGambleLocationsResponse {
+      gamble_locations: gamble_locations()
+        .iter()
+        .map(|loc| GambleLocationRes {
+          descriptor: Some(loc.descriptor.clone()),
+          is_available: loc.descriptor.id == 0, // TODO
+        })
+        .collect(),
+    }))
+  }
   async fn get_mine_locations(
     &self,
     _req: Request<GetMineLocationsRequest>,

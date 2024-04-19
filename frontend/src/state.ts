@@ -2,17 +2,16 @@ import { writable } from 'svelte/store';
 import type { ItemDescriptor, LocationDescriptor, UserAccountInfo } from './protos/mine_pb';
 import { PrivateClient } from './api';
 
-interface MineLocation {
+interface Location {
   descriptor: LocationDescriptor;
   isAvailable: boolean;
 }
-
 interface GlobalAppState {
   items: ItemDescriptor[];
   itemsById: Map<number, ItemDescriptor>;
   accountInfo: UserAccountInfo;
-  mineLocations?: MineLocation[];
-  gambleLocations?: MineLocation[];
+  mineLocations?: Location[];
+  gambleLocations?: Location[];
 }
 
 export const AppLoaded = writable(false);
@@ -50,7 +49,16 @@ export const initAppState = async () => {
     GlobalState.update((state) => ({
       ...state,
       mineLocations,
-      gambleLocations: mineLocations, // TODO: Fetch real ones
+    }));
+  });
+  PrivateClient.getGambleLocations({}).then((res) => {
+    const gambleLocations = res.gambleLocations.map((loc) => ({
+      descriptor: loc.descriptor!,
+      isAvailable: loc.isAvailable,
+    }));
+    GlobalState.update((state) => ({
+      ...state,
+      gambleLocations,
     }));
   });
 };

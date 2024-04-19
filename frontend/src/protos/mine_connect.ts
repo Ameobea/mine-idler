@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetAccountRequest, GetAccountResponse, GetBaseRequest, GetBaseResponse, GetHiscoresRequest, GetHiscoresResponse, GetInventoryRequest, GetInventoryResponse, GetItemDescriptorsRequest, GetItemDescriptorsResponse, GetMineLocationsRequest, GetMineLocationsResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, StartMiningRequest, StartMiningResponse, StopMiningRequest, StopMiningResponse, UpgradeBaseRequest, UpgradeBaseResponse } from "./mine_pb.js";
+import { GetAccountRequest, GetAccountResponse, GetBaseRequest, GetBaseResponse, GetGambleLocationsRequest, GetGambleLocationsResponse, GetHiscoresRequest, GetHiscoresResponse, GetInventoryRequest, GetInventoryResponse, GetItemDescriptorsRequest, GetItemDescriptorsResponse, GetMineLocationsRequest, GetMineLocationsResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, StartMiningRequest, StartMiningResponse, StopMiningRequest, StopMiningResponse, UpgradeBaseRequest, UpgradeBaseResponse } from "./mine_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -74,6 +74,15 @@ export const MinePrivateService = {
       name: "GetMineLocations",
       I: GetMineLocationsRequest,
       O: GetMineLocationsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mine.MinePrivateService.GetGambleLocations
+     */
+    getGambleLocations: {
+      name: "GetGambleLocations",
+      I: GetGambleLocationsRequest,
+      O: GetGambleLocationsResponse,
       kind: MethodKind.Unary,
     },
     /**

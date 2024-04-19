@@ -233,45 +233,72 @@ impl LootTable {
   }
 }
 
-pub struct MineLocation {
+pub struct Location {
   pub descriptor: LocationDescriptor,
   pub loot_table: LootTable,
 }
 
-static MINE_LOCATIONS: OnceCell<Vec<MineLocation>> = OnceCell::new();
-
-pub fn mine_locations() -> &'static Vec<MineLocation> {
+static MINE_LOCATIONS: OnceCell<Vec<Location>> = OnceCell::new();
+static GAMBLE_LOCATIONS: OnceCell<Vec<Location>> = OnceCell::new();
+pub fn mine_locations() -> &'static Vec<Location> {
   MINE_LOCATIONS
     .get()
     .expect("Mine locations not initialized")
 }
+pub fn gamble_locations() -> &'static Vec<Location> {
+  GAMBLE_LOCATIONS
+    .get()
+    .expect("Gamble locations not initialized")
+}
 
 pub fn init_loot_tables() -> BootstrapResult<()> {
-  let location_descriptors: Vec<LocationDescriptor> =
+  let mine_location_descriptors: Vec<LocationDescriptor> =
     serde_yaml::from_str(include_str!("mine_locations.yml"))?;
-
+  let gamble_location_descriptors: Vec<LocationDescriptor> =
+    serde_yaml::from_str(include_str!("gamble_locations.yml"))?;
   let loot_tables = [
     ("starter", include_str!("loot_tables/starter.yml")),
     ("sewers", include_str!("loot_tables/sewers.yml")),
   ];
 
-  let mut locations = Vec::new();
-  for descriptor in location_descriptors {
+  let mut mine_locations = Vec::new();
+  for descriptor in mine_location_descriptors {
     let loot_table = loot_tables
       .iter()
       .find(|(name, _)| name == &descriptor.name)
       .map(|(_, table)| serde_yaml::from_str::<LootTable>(table).unwrap())
-      .ok_or_else(|| anyhow::anyhow!("No loot table found for location {}", descriptor.name))?;
-    locations.push(MineLocation {
+      .ok_or_else(|| {
+        anyhow::anyhow!("No loot table found for mine location {}", descriptor.name)
+      })?;
+    mine_locations.push(Location {
+      descriptor,
+      loot_table,
+    });
+  }
+  let mut gamble_locations = Vec::new();
+  for descriptor in gamble_location_descriptors {
+    let loot_table = loot_tables
+      .iter()
+      .find(|(name, _)| name == &descriptor.name)
+      .map(|(_, table)| serde_yaml::from_str::<LootTable>(table).unwrap())
+      .ok_or_else(|| {
+        anyhow::anyhow!(
+          "No loot table found for gamble location {}",
+          descriptor.name
+        )
+      })?;
+    gamble_locations.push(Location {
       descriptor,
       loot_table,
     });
   }
 
   MINE_LOCATIONS
-    .set(locations)
+    .set(mine_locations)
     .map_err(|_| anyhow::anyhow!("Mine locations already initialized"))?;
-
+  GAMBLE_LOCATIONS
+    .set(gamble_locations)
+    .map_err(|_| anyhow::anyhow!("Mine locations already initialized"))?;
   info!("Initialized loot tables");
 
   Ok(())

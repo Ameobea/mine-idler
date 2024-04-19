@@ -797,6 +797,37 @@ export class GetMineLocationsRequest extends Message<GetMineLocationsRequest> {
 }
 
 /**
+ * @generated from message mine.GetGambleLocationsRequest
+ */
+export class GetGambleLocationsRequest extends Message<GetGambleLocationsRequest> {
+  constructor(data?: PartialMessage<GetGambleLocationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "mine.GetGambleLocationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGambleLocationsRequest {
+    return new GetGambleLocationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetGambleLocationsRequest {
+    return new GetGambleLocationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetGambleLocationsRequest {
+    return new GetGambleLocationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetGambleLocationsRequest | PlainMessage<GetGambleLocationsRequest> | undefined, b: GetGambleLocationsRequest | PlainMessage<GetGambleLocationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetGambleLocationsRequest, a, b);
+  }
+}
+
+/**
  * @generated from message mine.LocationDescriptor
  */
 export class LocationDescriptor extends Message<LocationDescriptor> {
@@ -848,6 +879,86 @@ export class LocationDescriptor extends Message<LocationDescriptor> {
 
   static equals(a: LocationDescriptor | PlainMessage<LocationDescriptor> | undefined, b: LocationDescriptor | PlainMessage<LocationDescriptor> | undefined): boolean {
     return proto3.util.equals(LocationDescriptor, a, b);
+  }
+}
+
+/**
+ * @generated from message mine.GambleLocationRes
+ */
+export class GambleLocationRes extends Message<GambleLocationRes> {
+  /**
+   * @generated from field: mine.LocationDescriptor descriptor = 1;
+   */
+  descriptor?: LocationDescriptor;
+
+  /**
+   * @generated from field: bool is_available = 2;
+   */
+  isAvailable = false;
+
+  constructor(data?: PartialMessage<GambleLocationRes>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "mine.GambleLocationRes";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "descriptor", kind: "message", T: LocationDescriptor },
+    { no: 2, name: "is_available", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GambleLocationRes {
+    return new GambleLocationRes().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GambleLocationRes {
+    return new GambleLocationRes().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GambleLocationRes {
+    return new GambleLocationRes().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GambleLocationRes | PlainMessage<GambleLocationRes> | undefined, b: GambleLocationRes | PlainMessage<GambleLocationRes> | undefined): boolean {
+    return proto3.util.equals(GambleLocationRes, a, b);
+  }
+}
+
+/**
+ * @generated from message mine.GetGambleLocationsResponse
+ */
+export class GetGambleLocationsResponse extends Message<GetGambleLocationsResponse> {
+  /**
+   * @generated from field: repeated mine.GambleLocationRes gamble_locations = 1;
+   */
+  gambleLocations: GambleLocationRes[] = [];
+
+  constructor(data?: PartialMessage<GetGambleLocationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "mine.GetGambleLocationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "gamble_locations", kind: "message", T: GambleLocationRes, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGambleLocationsResponse {
+    return new GetGambleLocationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetGambleLocationsResponse {
+    return new GetGambleLocationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetGambleLocationsResponse {
+    return new GetGambleLocationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetGambleLocationsResponse | PlainMessage<GetGambleLocationsResponse> | undefined, b: GetGambleLocationsResponse | PlainMessage<GetGambleLocationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetGambleLocationsResponse, a, b);
   }
 }
 
